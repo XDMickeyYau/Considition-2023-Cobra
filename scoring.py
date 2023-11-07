@@ -151,7 +151,7 @@ def distanceBetweenPoint(lat_1, long_1, lat_2, long_2) -> int:
 
     d = R * c
 
-    return round(d, 0)
+    return int(round(d, 0))
 
 
 def distributeSales(with_, without, generalData):

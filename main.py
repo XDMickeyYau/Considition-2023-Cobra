@@ -8,6 +8,7 @@ from data_keys import (
     ScoringKeys as SK,
 )
 from dotenv import load_dotenv
+import optimal_machine_count
 
 load_dotenv()
 apiKey = os.environ["apiKey"]
@@ -80,6 +81,9 @@ def main():
                         LK.f9100Count: 0,
                         LK.f3100Count: 1,
                     }
+            results = optimal_machine_count.optimal_f3f9_count(solution, mapEntity, generalData)
+            for i in range(len(results[0])):
+                solution[LK.locations][results[0][i]] = {LK.f3100Count: results[1][i * 2], LK.f9100Count: results[1][i * 2 + 1]}
             # ----------------End of player code--------------------------
             # ------------------------------------------------------------
 
@@ -91,7 +95,7 @@ def main():
             print(f"Enter {id_} into visualization.ipynb for local vizualization ")
 
             # Store solution locally for visualization
-            with open(f"{game_folder}\{id_}.json", "w", encoding="utf8") as f:
+            with open(f"{game_folder}/{id_}.json", "w", encoding="utf8") as f:
                 json.dump(score, f, indent=4)
 
             # Submit and and get score from Considition app
