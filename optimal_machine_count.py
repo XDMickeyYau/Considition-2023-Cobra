@@ -14,6 +14,9 @@ from scipy.optimize import Bounds, LinearConstraint, milp
 
 # solution must have a dict with name of valid refill stations as key in solution[LK.locations]
 def optimal_f3f9_count(solution, mapEntity, generalData) -> tuple[list, ndarray]:
+    """Find optimal f3 and f9 counts for a possible set of placement of refill stations using linear programming."""
+
+    # (mostly) same as scoring.calculateScore
     scoredSolution = {
         LK.locations: {}
     }
@@ -43,12 +46,13 @@ def optimal_f3f9_count(solution, mapEntity, generalData) -> tuple[list, ndarray]
         scoredSolution[LK.locations], locationListNoRefillStation, generalData
     )
 
+    # State constant coefficients
     N = len(scoredSolution[LK.locations])
     NO_VAR = 3 * N
     NO_CONSTRAINTS = 2 * N
     MAX_F3F9_COUNT = 5
     keys_order, refill_sales_vol = [], []
-    # total_footfall = 0
+    # total_footfall = 0                                                            # for printing score
     for key in scoredSolution[LK.locations]:
         keys_order.append(key)
         refill_sales_vol.append(scoredSolution[LK.locations][key][LK.salesVolume])
@@ -58,6 +62,8 @@ def optimal_f3f9_count(solution, mapEntity, generalData) -> tuple[list, ndarray]
     co2_const_f3_withc = generalData[GK.f3100Data][GK.staticCo2] * generalData[GK.co2PricePerKiloInSek] / 1000
     co2_const_f9_withc = generalData[GK.f9100Data][GK.staticCo2] * generalData[GK.co2PricePerKiloInSek] / 1000
 
+    # construct constraints: (f3count_i)*cap3 + (f9count_i)*cap9 >= ful_sales_i for i from 1 to n = no of refill station
+    #                        f3count_i + f9count_i >= 1 for i from 1 to n
     b_l = np.append(np.zeros(N), np.ones(N))
     b_u = np.full_like(b_l, math.inf)
     A = np.zeros((NO_CONSTRAINTS, NO_VAR))
@@ -69,6 +75,11 @@ def optimal_f3f9_count(solution, mapEntity, generalData) -> tuple[list, ndarray]
         A[i][(i - N) * 2] = A[i][(i - N) * 2 + 1] = 1
     constraints = LinearConstraint(A, b_l, b_u)
 
+    # construct bounds: 0 <= f3count_i, f9count_i <= 5 for i from 1 to n
+    #                   0 <= ful_sales_i <= sales_vol_i for i from 1 to n
+    # construct cost vector -f(x) where f(x) is:
+    #   sum(ful_sales_i * profitPerUnit - (f3count_i)*cost3 - (f9count_i)*cost10)
+    #   + sum((ful_sales_i)*cs*c - (f3count_i)*c3*c - (f9count_i)*c9*c)
     c = np.empty(NO_VAR)
     integrality = np.empty(NO_VAR)
     l = np.zeros(NO_VAR)
@@ -87,4 +98,6 @@ def optimal_f3f9_count(solution, mapEntity, generalData) -> tuple[list, ndarray]
     bounds = Bounds(l, u)
 
     results = milp(c=c, integrality=integrality, constraints=constraints, bounds=bounds)
+    # print simulated score to see how close it is to the real score
+    # print(results.fun * (1 + total_footfall))
     return (keys_order, results.x)
