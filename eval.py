@@ -10,6 +10,7 @@ from data_keys import (
 )
 from dotenv import load_dotenv
 import pandas as pd
+import optimal_machine_count
 
 load_dotenv()
 apiKey = os.environ["apiKey"]
@@ -28,6 +29,10 @@ for mapName in mapNames:
         # ------------------------------------------------------------
         # ----------------Player Algorithm goes here------------------
         solution = algo(func_name,mapEntity, generalData)
+        linp_res = optimal_machine_count.optimal_f3f9_count(solution, mapEntity, generalData)
+        for i in range(len(linp_res[0])):
+            solution[LK.locations][linp_res[0][i]] = {LK.f3100Count: linp_res[1][i * 2],
+                                                     LK.f9100Count: linp_res[1][i * 2 + 1]}
         # ----------------End of player code--------------------------
         # ------------------------------------------------------------
 
@@ -37,7 +42,7 @@ for mapName in mapNames:
         result = pd.Series(score[SK.gameScore]).to_frame().T
         result.insert(0, 'mapName', mapName)
         results.append(result)
-        
+
 
 results = pd.concat(results,axis=0)
 results.insert(0, 'func_name', func_name)

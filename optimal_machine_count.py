@@ -6,10 +6,8 @@ from data_keys import (
     LocationKeys as LK,
     CoordinateKeys as CK,
     GeneralKeys as GK,
-    ScoringKeys as SK,
 )
 import scoring
-import uuid
 import numpy as np
 from scipy.optimize import Bounds, LinearConstraint, milp
 
@@ -47,7 +45,7 @@ def optimal_f3f9_count(solution, mapEntity, generalData) -> tuple[list, ndarray]
 
     N = len(scoredSolution[LK.locations])
     NO_VAR = 3 * N
-    NO_CONSTRAINTS = N
+    NO_CONSTRAINTS = 2 * N
     MAX_F3F9_COUNT = 5
     keys_order, refill_sales_vol = [], []
     # total_footfall = 0
@@ -60,13 +58,15 @@ def optimal_f3f9_count(solution, mapEntity, generalData) -> tuple[list, ndarray]
     co2_const_f3_withc = generalData[GK.f3100Data][GK.staticCo2] * generalData[GK.co2PricePerKiloInSek] / 1000
     co2_const_f9_withc = generalData[GK.f9100Data][GK.staticCo2] * generalData[GK.co2PricePerKiloInSek] / 1000
 
-    b_l = np.zeros(N)
+    b_l = np.append(np.zeros(N), np.ones(N))
     b_u = np.full_like(b_l, math.inf)
     A = np.zeros((NO_CONSTRAINTS, NO_VAR))
     for i in range(N):
         A[i][i * 2] = generalData[GK.f3100Data][GK.refillCapacityPerWeek]                 # f3100count_i
         A[i][i * 2 + 1] = generalData[GK.f9100Data][GK.refillCapacityPerWeek]             # f9100count_i
         A[i][i + 2 * N] = -1                                                              # fulfilled_saled_i
+    for i in range(N, 2 * N):
+        A[i][(i - N) * 2] = A[i][(i - N) * 2 + 1] = 1
     constraints = LinearConstraint(A, b_l, b_u)
 
     c = np.empty(NO_VAR)
