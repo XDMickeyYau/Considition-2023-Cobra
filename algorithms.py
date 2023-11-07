@@ -10,7 +10,7 @@ from data_keys import (
 )
 from dotenv import load_dotenv
 
-def naive(mapEntity,  generalData):
+def naive_ver1(mapEntity,  generalData):
     solution = {LK.locations: {}}
 
     for key in mapEntity[LK.locations]:
@@ -20,6 +20,37 @@ def naive(mapEntity,  generalData):
         salesVolume = location[LK.salesVolume]
         locationType = location[LK.locationType]
         footfall = location[LK.footfall]
+
+        min_sale = min(salesVolume,generalData[GK.f3100Data][GK.refillCapacityPerWeek])
+        revenue = min_sale * generalData[GK.refillUnitData][GK.profitPerUnit]
+        earnings = revenue - generalData[GK.f3100Data][GK.leasingCostPerWeek]
+        
+        if locationType in ['Grocery-store-large']:
+            solution[LK.locations][name] = {
+                LK.f9100Count: 1,
+                LK.f3100Count: 0,
+            }
+        else: 
+            solution[LK.locations][name] = {
+                LK.f9100Count: 0,
+                LK.f3100Count: 1,
+            }
+    return solution
+        
+def naive_ver2(mapEntity,  generalData):
+    solution = {LK.locations: {}}
+
+    for key in mapEntity[LK.locations]:
+        location = mapEntity[LK.locations][key]
+        name = location[LK.locationName]
+
+        salesVolume = location[LK.salesVolume]
+        locationType = location[LK.locationType]
+        footfall = location[LK.footfall]
+
+        min_sale = min(salesVolume,generalData[GK.f3100Data][GK.refillCapacityPerWeek])
+        revenue = min_sale * generalData[GK.refillUnitData][GK.profitPerUnit]
+        earnings = revenue - generalData[GK.f3100Data][GK.leasingCostPerWeek]
         
         if locationType in ['Grocery-store-large']:
             solution[LK.locations][name] = {
@@ -31,7 +62,7 @@ def naive(mapEntity,  generalData):
                 LK.f9100Count: 0,
                 LK.f3100Count: 1,
             }
-        else: # salesVolume > generalData[GK.f3100Data][GK.refillCapacityPerWeek]:
+        elif earnings>0 or footfall>0: #: # salesVolume > generalData[GK.f3100Data][GK.refillCapacityPerWeek]:
             solution[LK.locations][name] = {
                 LK.f9100Count: 0,
                 LK.f3100Count: 1,
@@ -39,3 +70,5 @@ def naive(mapEntity,  generalData):
     return solution
         
     
+def algo(name, mapEntity,  generalData):
+    return eval(name)(mapEntity,  generalData)
