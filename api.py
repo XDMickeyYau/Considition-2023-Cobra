@@ -46,7 +46,11 @@ def getGame(id_):
         return resp.json()
 
 
-def submit(mapName: str, solution, apiKey):
+def submit(
+    mapName: str,
+    solution,
+    apiKey,
+):
     try:
         resp = requests.post(
             f"{domain}/api/Game/submitSolution?mapName={mapName}",

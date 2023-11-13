@@ -6,6 +6,9 @@ from data_keys import (
     MapNames as MN,
     LocationKeys as LK,
     ScoringKeys as SK,
+    HotspotKeys as HK,
+    GeneralKeys as GK,
+    CoordinateKeys as CK,
 )
 from dotenv import load_dotenv
 
@@ -34,6 +37,8 @@ def main():
     print(f"7: {MN.london}")
     print(f"8: {MN.berlin}")
     print(f"9: {MN.linkoping}")
+    print(f"10: {MN.sSandbox}")
+    print(f"11: {MN.gSandbox}")
     option_ = input("Select the map you wish to play: ")
 
     mapName = None
@@ -56,6 +61,10 @@ def main():
             mapName = MN.berlin
         case "9":
             mapName = MN.linkoping
+        case "10":
+            mapName = MN.sSandbox
+        case "11":
+            mapName = MN.gSandbox
         case _:
             print("Invalid choice.")
 
@@ -69,25 +78,49 @@ def main():
             # ------------------------------------------------------------
             # ----------------Player Algorithm goes here------------------
             solution = {LK.locations: {}}
+            if mapName not in [MN.sSandbox, MN.gSandbox]:
+                for key in mapEntity[LK.locations]:
+                    location = mapEntity[LK.locations][key]
+                    name = location[LK.locationName]
 
-            for key in mapEntity[LK.locations]:
-                location = mapEntity[LK.locations][key]
-                name = location[LK.locationName]
+                    salesVolume = location[LK.salesVolume]
+                    if salesVolume > 100:
+                        solution[LK.locations][name] = {
+                            LK.f9100Count: 1,
+                            LK.f3100Count: 0,
+                        }
+            else:
+                hotspot1 = mapEntity[HK.hotspots][0]
+                hotspot2 = mapEntity[HK.hotspots][1]
 
-                salesVolume = location[LK.salesVolume]
-                if salesVolume > 100:
-                    solution[LK.locations][name] = {
-                        LK.f9100Count: 0,
-                        LK.f3100Count: 1,
-                    }
+                solution[LK.locations]["location1"] = {
+                    LK.f9100Count: 1,
+                    LK.f3100Count: 0,
+                    LK.locationType: generalData[GK.locationTypes][
+                        GK.groceryStoreLarge
+                    ][GK.type_],
+                    CK.longitude: hotspot1[CK.longitude],
+                    CK.latitude: hotspot1[CK.latitude],
+                }
+
+                solution[LK.locations]["location2"] = {
+                    LK.f9100Count: 0,
+                    LK.f3100Count: 1,
+                    LK.locationType: generalData[GK.locationTypes][GK.groceryStore][
+                        GK.type_
+                    ],
+                    CK.longitude: hotspot2[CK.longitude],
+                    CK.latitude: hotspot2[CK.latitude],
+                }
             # ----------------End of player code--------------------------
             # ------------------------------------------------------------
 
             # Score solution locally
             score = calculateScore(mapName, solution, mapEntity, generalData)
 
+            print(f"Score: {score[SK.gameScore]}")
             id_ = score[SK.gameId]
-            print(f"Storing  game with id {id_}.")
+            print(f"Storing game with id {id_}.")
             print(f"Enter {id_} into visualization.ipynb for local vizualization ")
 
             # Store solution locally for visualization
