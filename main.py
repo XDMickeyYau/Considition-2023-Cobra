@@ -1,5 +1,6 @@
 import os
 import json
+from algorithms import naive_ver2
 from scoring import calculateScore
 from api import getGeneralData, getMapData, submit
 from data_keys import (
@@ -68,18 +69,19 @@ def main():
         if mapEntity and generalData:
             # ------------------------------------------------------------
             # ----------------Player Algorithm goes here------------------
-            solution = {LK.locations: {}}
+            # solution = {LK.locations: {}}
 
-            for key in mapEntity[LK.locations]:
-                location = mapEntity[LK.locations][key]
-                name = location[LK.locationName]
+            # for key in mapEntity[LK.locations]:
+            #     location = mapEntity[LK.locations][key]
+            #     name = location[LK.locationName]
 
-                salesVolume = location[LK.salesVolume]
-                if salesVolume > 100:
-                    solution[LK.locations][name] = {
-                        LK.f9100Count: 0,
-                        LK.f3100Count: 1,
-                    }
+            #     salesVolume = location[LK.salesVolume]
+            #     if salesVolume > 100:
+            #         solution[LK.locations][name] = {
+            #             LK.f9100Count: 0,
+            #             LK.f3100Count: 1,
+            #         }
+            solution = naive_ver2(mapEntity, generalData)
             # ----------------End of player code--------------------------
             # ------------------------------------------------------------
 
