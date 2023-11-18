@@ -61,7 +61,6 @@ def create_graph(mapEntity, generalData):
                     G.add_edge(key_from, key_to)
     return G
 
-
 def deploy_refill(sales, generalData):
 
     sales_F3 = min(sales,generalData[GK.f3100Data][GK.refillCapacityPerWeek])
@@ -120,30 +119,37 @@ def aggregate_sales(key, S, generalData):
         sales += S.nodes[neighbor][LK.salesVolume]*generalData[GK.refillDistributionRate]
     return sales
 
+def update_subgraph(S, generalData):
+    for key in S.nodes():
+        sales = aggregate_sales(key, S, generalData)
+        S.nodes[key]['real_sales'] = sales
+        deployment, score = deploy_refill(S.nodes[key]['real_sales'], generalData)           
+        S.nodes[key]['solution'] = deployment
+        S.nodes[key]['score'] = score
+    return S
+
+def deploy_subgraph(S, sorted_node, solution):
+    disabled = set()
+    for key in sorted_node:
+        # print(key, disabled, S.nodes[key][LK.locationType], int(S.nodes[key]['score']), S.nodes[key][LK.footfall])
+        if key not in disabled:
+            name = S.nodes[key][LK.locationName]
+            if S.nodes[key]['solution'] is not None:
+                solution[LK.locations][name] = S.nodes[key]['solution']
+            disabled.add(key)
+            disabled.update(nx.all_neighbors(S, key))
+            # print("added")
+    return solution
+
 
 def graph_greedy(mapEntity, generalData):
     solution = {LK.locations: dict()}
     G = create_graph(mapEntity, generalData)
     for C in nx.connected_components(G):
-        # print("*************")
         S = G.subgraph(C)
-        for key in S.nodes():
-            sales = aggregate_sales(key, S, generalData)
-            S.nodes[key]['real_sales'] = sales
-            deployment, score = deploy_refill(S.nodes[key]['real_sales'], generalData)           
-            S.nodes[key]['solution'] = deployment
-            S.nodes[key]['score'] = score
+        S = update_subgraph(S, generalData)
         sorted_node = sorted(S.nodes(), key=lambda n: (S.nodes[n]['real_sales'], S.nodes[n][LK.footfall]),reverse=True)
-        disabled = set()
-        for key in sorted_node:
-            # print(key, disabled, S.nodes[key][LK.locationType], int(S.nodes[key]['score']), S.nodes[key][LK.footfall])
-            if key not in disabled:
-                name = S.nodes[key][LK.locationName]
-                if S.nodes[key]['solution'] is not None:
-                    solution[LK.locations][name] = S.nodes[key]['solution']
-                disabled.add(key)
-                disabled.update(nx.all_neighbors(S, key))
-                # print("added")
+        solution = deploy_subgraph(S, sorted_node, solution)
     return solution
 
      
