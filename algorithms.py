@@ -103,14 +103,22 @@ def deploy_refill(sales, generalData):
         return {
                 LK.f9100Count: 1,
                 LK.f3100Count: 0,
-            }, total_F9
+            }, {
+                SK.earnings: earnings_F9,
+                SK.co2Savings: co2Savings_F9,
+                SK.total: total_F9,
+            }
     elif total_F3 > 0:
         return {
                 LK.f9100Count: 0,
                 LK.f3100Count: 1,
-            }, total_F3
+            }, {
+                SK.earnings: earnings_F3,
+                SK.co2Savings: co2Savings_F3,
+                SK.total: total_F3,
+            }
     else:
-        return None, 0
+        return None, {}
 
 def aggregate_sales(key, S, generalData):
     sales = S.nodes[key][LK.salesVolume]
@@ -123,19 +131,28 @@ def update_subgraph(S, generalData):
     for key in S.nodes():
         sales = aggregate_sales(key, S, generalData)
         S.nodes[key]['real_sales'] = sales
-        deployment, score = deploy_refill(S.nodes[key]['real_sales'], generalData)           
-        S.nodes[key]['solution'] = deployment
-        S.nodes[key]['score'] = score
+        deployment, score_dict = deploy_refill(S.nodes[key]['real_sales'], generalData)
+        if deployment is not None:      
+            S.nodes[key]['solution'] = deployment
+            S.nodes[key][SK.earnings] = score_dict[SK.earnings] / 1000
+            S.nodes[key][SK.co2Savings] = score_dict[SK.co2Savings] / 1000
+            S.nodes[key]['score'] = score_dict[SK.total] / 1000
+            S.nodes[key][LK.footfall] = S.nodes[key][LK.footfall] / 1000
     return S
 
-def deploy_subgraph(S, sorted_node, solution):
+def deploy_subgraph(S, sorted_node, solution, total_score):
     disabled = set()
     for key in sorted_node:
         # print(key, disabled, S.nodes[key][LK.locationType], int(S.nodes[key]['score']), S.nodes[key][LK.footfall])
         if key not in disabled:
             name = S.nodes[key][LK.locationName]
-            if S.nodes[key]['solution'] is not None:
+            if 'solution' in S.nodes[key]:
+                # print(key, S.nodes[key][SK.earnings], S.nodes[key][SK.co2Savings], S.nodes[key]['score'], S.nodes[key][LK.footfall])
                 solution[LK.locations][name] = S.nodes[key]['solution']
+                total_score[SK.earnings] += S.nodes[key][SK.earnings] 
+                total_score[SK.co2Savings] += S.nodes[key][SK.co2Savings]
+                total_score['base_score'] += S.nodes[key]['score'] 
+                total_score['footfall'] += S.nodes[key][LK.footfall] 
             disabled.add(key)
             disabled.update(nx.all_neighbors(S, key))
             # print("added")
@@ -145,11 +162,19 @@ def deploy_subgraph(S, sorted_node, solution):
 def graph_greedy(mapEntity, generalData):
     solution = {LK.locations: dict()}
     G = create_graph(mapEntity, generalData)
+    total_score = {
+        SK.earnings: 0,
+        SK.co2Savings: 0,
+        "base_score": 0,
+        "footfall": 0,
+    }
     for C in nx.connected_components(G):
         S = G.subgraph(C)
         S = update_subgraph(S, generalData)
         sorted_node = sorted(S.nodes(), key=lambda n: (S.nodes[n]['real_sales'], S.nodes[n][LK.footfall]),reverse=True)
-        solution = deploy_subgraph(S, sorted_node, solution)
+        solution = deploy_subgraph(S, sorted_node, solution, total_score)
+    # print("total_score",total_score)
+    # print("total_score",total_score['base_score']*(1+total_score['footfall']))
     return solution
 
      
