@@ -1,5 +1,8 @@
+import itertools
 import os
 import json
+
+from sklearn.model_selection import ParameterGrid
 from scoring import calculateScore, distanceBetweenPoint
 from api import getGeneralData, getMapData, submit
 from data_keys import (
@@ -159,7 +162,7 @@ def deploy_subgraph(S, sorted_node, solution, total_score):
     return solution
 
 
-def graph_greedy(mapEntity, generalData):
+def graph_greedy(mapEntity, generalData, mapName):
     solution = {LK.locations: dict()}
     G = create_graph(mapEntity, generalData)
     total_score = {
@@ -177,11 +180,62 @@ def graph_greedy(mapEntity, generalData):
     # print("total_score",total_score['base_score']*(1+total_score['footfall']))
     return solution
 
-     
-    
-def algo(name, mapEntity,  generalData):
+def deploy_refill_simple(locationtype):
+    # ['Grocery-store-large','Grocery-store','Gas-station','Convenience','Kiosk']
+    if locationtype == 'Grocery-store-large':
+        return {
+                LK.f9100Count: 1,
+                LK.f3100Count: 0,
+        }
+    elif locationtype != 'Kiosk':
+        return {
+                LK.f9100Count: 0,
+                LK.f3100Count: 1,
+        }
+    else:
+        return None
+
+def brute_force(mapEntity, generalData, mapName):
+    print("brute force")
+    solution_grid = dict()
+    G = create_graph(mapEntity, generalData)
+    print("graph created")
+    for node in G.nodes:
+        if G.degree[node] == 0:
+            solution_grid[node] = [deploy_refill_simple(G.nodes[node][LK.locationType])]
+        else:
+            solution_grid[node] = [
+                None,
+                {
+                LK.f9100Count: 0,
+                LK.f3100Count: 1,
+                },
+                {
+                LK.f9100Count: 1,
+                LK.f3100Count: 0,
+                },    
+            ]
+        print(G.degree[node], G.nodes[node][LK.locationType], solution_grid[node])
+    print("solution_grid",len(solution_grid))
+    L = [[(k, v) for v in vs] for k, vs in solution_grid.items()]
+    print("L",len(L))
+    solutions = list(map(dict, itertools.product(*L)))
+    print("POSSIBLE SOLUTION:", len(solutions))
+    max_score = 0
+    max_solution = None
+    for solution in solutions:
+        solution = {k:v for k,v in solution.items() if v is not None}
+        solution = {LK.locations: solution}
+        score = calculateScore(mapName, solution, mapEntity, generalData)
+        if score > max_score:
+            max_score = score
+            max_solution = solution
+    return max_solution
+
+def algo(name, mapEntity,  generalData, mapName):
     func_map = {
         "graph_greedy": graph_greedy,
+        "brute_force": brute_force
     }
     func = func_map[name]
-    return func(mapEntity,  generalData)
+    return func(mapEntity,  generalData, mapName)
