@@ -14,9 +14,9 @@ import pandas as pd
 load_dotenv()
 apiKey = os.environ["apiKey"]
 
-mapNames = [MN.goteborg, MN.uppsala, MN.vasteras, MN.linkoping]
+mapNames = [MN.goteborg, MN.uppsala, MN.vasteras, MN.linkoping][::-1]
 results = []
-func_name = 'naive_ver3'
+func_name = 'brute_force'
 comment = "naive_ver3"
 
 for mapName in mapNames:
@@ -28,7 +28,8 @@ for mapName in mapNames:
     if mapEntity and generalData:
         # ------------------------------------------------------------
         # ----------------Player Algorithm goes here------------------
-        solution = algo(func_name,mapEntity, generalData)
+        print(f"Playing map {mapName}")
+        solution = algo(func_name,mapEntity, generalData, mapName)
         # ----------------End of player code--------------------------
         # ------------------------------------------------------------
 
