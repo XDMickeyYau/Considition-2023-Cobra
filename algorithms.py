@@ -137,7 +137,7 @@ def update_subgraph(S, generalData):
         sales = aggregate_sales(key, S, generalData)
         S.nodes[key]['real_sales'] = sales
         deployment, score_dict = deploy_refill(S.nodes[key]['real_sales'], generalData)
-        print(key, S.degree[key], S.nodes[key][LK.locationType], sales, deployment, score_dict)
+        # print(key, S.degree[key], S.nodes[key][LK.locationType], sales, deployment, score_dict)
         if deployment is not None:      
             S.nodes[key]['solution'] = deployment
             S.nodes[key][SK.earnings] = score_dict[SK.earnings] / 1000
@@ -215,14 +215,13 @@ def graph_greedy_score(mapEntity, generalData, mapName):
             test = deploy_refill_simple(G.nodes[key][LK.locationType])
             if test is not None:
                 solution_subgraph[LK.locations][key] = test
-                scoredSolution = calculateScore(mapName, solution_subgraph, mapEntity_subgraph, generalData)
-                for score_key in total_score:
-                    total_score[score_key] += scoredSolution[SK.gameScore][score_key]
         else:
             S = G.subgraph(C)
             available = copy.deepcopy(C)
             best_total = 0
+            print("C",C)
             while len(available):
+                print("step")
                 # place refill station at each step
                 best_solution = None
                 for key in available:
@@ -232,7 +231,9 @@ def graph_greedy_score(mapEntity, generalData, mapName):
                         for score_key in total_score:
                             total_score[score_key] += scoredSolution[SK.gameScore][score_key]
                         total = cal_total_score(total_score,generalData)
-                        if total > best_total:
+                        print(key,G.nodes[key][LK.locationType],S.nodes[key][LK.footfall],total,solution_subgraph[LK.locations])
+                        if total > best_total or \
+                            (total == best_total and S.nodes[key][LK.footfall] > S.nodes[best_solution[0]][LK.footfall]):
                             best_solution = (key, solution_test)
                             best_total = total
                         for score_key in total_score:
@@ -242,14 +243,20 @@ def graph_greedy_score(mapEntity, generalData, mapName):
                 if best_solution is not None:
                     key, best_solution = best_solution
                     solution_subgraph[LK.locations][key] = best_solution
+                    print("best",solution_subgraph[LK.locations])
                     available.remove(key)
                     available -= set(nx.all_neighbors(S, key))
                 else: 
                     break
-        
-        print(solution)
-        print(C,solution_subgraph)
-        solution[LK.locations].update(solution_subgraph[LK.locations])
+        if solution_subgraph[LK.locations]:
+            solution[LK.locations].update(solution_subgraph[LK.locations])
+            scoredSolution = calculateScore(mapName, solution_subgraph, mapEntity_subgraph, generalData)
+            for score_key in total_score:
+                total_score[score_key] += scoredSolution[SK.gameScore][score_key]
+            print("subgraph",solution_subgraph[LK.locations])
+            # print("total_score",cal_total_score(total_score,generalData), total_score)
+    # solution = fix_refill_placement(solution, mapEntity, generalData, mapName)
+    return solution
     return solution
 
 def deploy_refill_simple(locationtype):
@@ -287,7 +294,7 @@ def brute_force(mapEntity, generalData, mapName):
                 LK.f3100Count: 0,
                 },    
             ]
-        print(G.degree[node], G.nodes[node][LK.locationType], solution_grid[node])
+        # print(G.degree[node], G.nodes[node][LK.locationType], solution_grid[node])
     print("solution_grid",len(solution_grid))
     L = [[(k, v) for v in vs] for k, vs in solution_grid.items()]
     print("L",len(L))
