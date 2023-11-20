@@ -187,6 +187,13 @@ def get_mapEntity_subgraph(mapEntity, C):
     mapEntity_subgraph[LK.locations] = {key: mapEntity[LK.locations][key] for key in C}
     return mapEntity_subgraph
 
+def get_solution_subgreaph(solution, C):
+    solution_subgraph = {
+        LK.locations:{
+            k:solution[LK.locations][k] for k in C if k in solution[LK.locations]
+            }
+        }
+    return solution_subgraph
 
 def cal_total_score(scoredSolution,generalData):
     return round(
@@ -200,63 +207,85 @@ def cal_total_score(scoredSolution,generalData):
     )
 
 def graph_greedy_score(mapEntity, generalData, mapName):
-    solution = {LK.locations: dict()}
     G = create_graph(mapEntity, generalData)
+    # Variables on solution and score
+    solution = {LK.locations: dict()}
     total_score = {
         SK.earnings: 0,
         SK.co2Savings: 0,
         SK.totalFootfall: 0,
     }    
-    for C in sorted (nx.connected_components(G), key=lambda C: len(C)):
-        mapEntity_subgraph = get_mapEntity_subgraph(mapEntity, C)
-        solution_subgraph = {LK.locations:dict()}
-        if len(C) == 1:
-            key = list(C)[0]
-            test = deploy_refill_simple(G.nodes[key][LK.locationType])
-            if test is not None:
-                solution_subgraph[LK.locations][key] = test
-        else:
+    best_total = 0
+    for i in range(2):
+        for C in sorted (nx.connected_components(G), key=lambda C: len(C)):
             S = G.subgraph(C)
+            # inotilize subgraph data and solution
+            mapEntity_subgraph = get_mapEntity_subgraph(mapEntity, C)
+            solution_subgraph = get_solution_subgreaph(solution, C)        
             available = copy.deepcopy(C)
-            best_total = 0
             print("C",C)
+            # Clear solution in subgraph
+            if solution_subgraph[LK.locations]:
+                scoredSolution = calculateScore(mapName, solution_subgraph, mapEntity_subgraph, generalData)
+                for score_key in total_score:
+                        total_score[score_key] -= scoredSolution[SK.gameScore][score_key]
+                best_total = cal_total_score(total_score,generalData)
+                for key in solution_subgraph[LK.locations]:
+                    solution[LK.locations].pop(key)
+                solution_subgraph = {LK.locations: dict()}
+            # Place refill station at each step
             while len(available):
                 print("step")
-                # place refill station at each step
                 best_solution = None
                 for key in available:
                     for solution_test in [{LK.f9100Count: 1, LK.f3100Count: 0}, {LK.f9100Count: 0, LK.f3100Count: 1}]:
+                        # Place refill station
                         solution_subgraph[LK.locations][key] = solution_test
                         scoredSolution = calculateScore(mapName, solution_subgraph, mapEntity_subgraph, generalData)
                         for score_key in total_score:
                             total_score[score_key] += scoredSolution[SK.gameScore][score_key]
+                        # Check if score is better
                         total = cal_total_score(total_score,generalData)
                         print(key,G.nodes[key][LK.locationType],S.nodes[key][LK.footfall],total,solution_subgraph[LK.locations])
                         if total > best_total or \
                             (total == best_total and S.nodes[key][LK.footfall] > S.nodes[best_solution[0]][LK.footfall]):
+                            # print("best",best_total,total)
                             best_solution = (key, solution_test)
                             best_total = total
+                        # Remove refill station
                         for score_key in total_score:
                             total_score[score_key] -= scoredSolution[SK.gameScore][score_key]
                         solution_subgraph[LK.locations].pop(key) 
                 
                 if best_solution is not None:
+                    # Place refill station in subgraph solution
                     key, best_solution = best_solution
                     solution_subgraph[LK.locations][key] = best_solution
-                    print("best",solution_subgraph[LK.locations])
                     available.remove(key)
                     available -= set(nx.all_neighbors(S, key))
                 else: 
                     break
-        if solution_subgraph[LK.locations]:
-            solution[LK.locations].update(solution_subgraph[LK.locations])
-            scoredSolution = calculateScore(mapName, solution_subgraph, mapEntity_subgraph, generalData)
-            for score_key in total_score:
-                total_score[score_key] += scoredSolution[SK.gameScore][score_key]
-            print("subgraph",solution_subgraph[LK.locations])
+            if solution_subgraph[LK.locations]:
+                # Place refill station in subgraph in solution
+                solution[LK.locations].update(solution_subgraph[LK.locations])
+                scoredSolution = calculateScore(mapName, solution_subgraph, mapEntity_subgraph, generalData)
+                for score_key in total_score:
+                    total_score[score_key] += scoredSolution[SK.gameScore][score_key]
+                print("subgraph",solution_subgraph[LK.locations])
             # print("total_score",cal_total_score(total_score,generalData), total_score)
     # solution = fix_refill_placement(solution, mapEntity, generalData, mapName)
     return solution
+
+def fix_refill_placement(solution, mapEntity, generalData, mapName):
+    scoredSolution = calculateScore(mapName, solution, mapEntity, generalData)
+    for key in scoredSolution[LK.locations]:
+        location = mapEntity[LK.locations][key]
+        salesVolume = location[LK.salesVolume]
+        deployment, score_dict = deploy_refill(salesVolume, generalData)
+        if deployment is not None:
+            solution[LK.locations][key] = deployment
+        else:
+            solution[LK.locations].pop(key)
     return solution
 
 def deploy_refill_simple(locationtype):
