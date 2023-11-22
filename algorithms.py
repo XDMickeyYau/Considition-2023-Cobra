@@ -348,22 +348,29 @@ def graph_beam_score(mapEntity, generalData, mapName):
                     visited = set(history[LK.locations].keys())
                     print("HIST:",history,C-visited)
                     for key in C-visited:
+                        tmp_solution = None
+                        tmp_total = 0
+                        tmp_footfall = 0
                         for solution_test in [{LK.f9100Count: 1, LK.f3100Count: 0}, {LK.f9100Count: 0, LK.f3100Count: 1}]:
                             total, footfall = try_placing_refill(history, key, solution_test, total_score, mapEntity_subgraph, generalData, mapName)
                             print(key, S.nodes[key][LK.locationType], total, footfall)
-                            if total > best_total:
-                                temp = copy.deepcopy(history)
-                                temp[LK.locations][key] = solution_test
-                                if len(bestk) < K:                            
-                                    heapq.heappush(bestk, KeyDict((total,footfall),{
-                                        LK.locations: temp[LK.locations],
-                                        'terminated': False,
-                                    }))
-                                else:
-                                    heapq.heappushpop(bestk, KeyDict((total,footfall),{
-                                        LK.locations: temp[LK.locations],
-                                        'terminated': False,
-                                    }))
+                            if total > tmp_total:
+                                tmp_solution = solution_test
+                                tmp_total = total       
+                                tmp_footfall = footfall          
+                        if tmp_total > best_total:
+                            temp = copy.deepcopy(history)
+                            temp[LK.locations][key] = tmp_solution
+                            if len(bestk) < K:                            
+                                heapq.heappush(bestk, KeyDict((tmp_total,tmp_footfall),{
+                                    LK.locations: temp[LK.locations],
+                                    'terminated': False,
+                                }))
+                            else:
+                                heapq.heappushpop(bestk, KeyDict((tmp_total,tmp_footfall),{
+                                    LK.locations: temp[LK.locations],
+                                    'terminated': False,
+                                }))
                             
                             print("TEMP:",temp)
                             print("BESTK",bestk)
