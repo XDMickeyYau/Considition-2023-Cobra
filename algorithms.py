@@ -240,9 +240,9 @@ def graph_greedy_score(mapEntity, generalData, mapName):
     # Variables on solution and score
     solution = {LK.locations: dict()}
     total_score = {
-        SK.earnings: 0,
         SK.co2Savings: 0,
         SK.totalFootfall: 0,
+        SK.earnings: 0,
         SK.total: 0,
     }    
     best_total = 0
@@ -276,12 +276,14 @@ def graph_greedy_score(mapEntity, generalData, mapName):
                 else: 
                     break
             print("subgraph",solution_subgraph[LK.locations], total_score)
-            print("------")
             if solution_subgraph[LK.locations]:
                 # Place refill station in subgraph in solution
                 solution[LK.locations].update(solution_subgraph[LK.locations])
                 scoredSolution = calculateScore(mapName, solution_subgraph, mapEntity_subgraph, generalData)
                 update_total_score(total_score,scoredSolution,generalData,add=1)
+            print("total_score",total_score)
+            print("TOTAL",calculateScore(mapName, solution, mapEntity, generalData)[SK.gameScore])
+            print("------")
                 
                 
             # print("total_score",cal_total_score(total_score,generalData), total_score)
