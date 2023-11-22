@@ -320,8 +320,9 @@ def graph_beam_score(mapEntity, generalData, mapName):
         SK.total: 0,
     }    
     best_total = 0
-    maxK = 2
-    for i in range(2):
+    maxK = 20
+    maxL = 2
+    for i in range(maxL):
         # reverse = i%2
         for C in sorted (nx.connected_components(G), key=lambda C: len(C), ): #reverse=reverse
             print("C",C)
