@@ -15,6 +15,25 @@ from data_keys import (
 )
 from dotenv import load_dotenv
 import networkx as nx
+import heapq
+
+from functools import total_ordering
+
+@total_ordering
+class KeyDict(object):
+    def __init__(self, key, dct):
+        self.key = key
+        self.dct = dct
+
+    def __lt__(self, other):
+        return self.key < other.key
+
+    def __eq__(self, other):
+        return self.key == other.key
+
+    def __repr__(self):
+        return '{0.__class__.__name__}(key={0.key}, dct={0.dct})'.format(self)
+
 
 # def naive_ver1(mapEntity,  generalData):
 #     solution = {LK.locations: {}}
@@ -209,7 +228,7 @@ def update_total_score(total_score,scoredSolution,generalData,add=1):
     return total_score[SK.total]
 
 def try_placing_refill(solution_subgraph, key, solution_test, total_score, mapEntity_subgraph, generalData, mapName):
-    print('try_placing_refill',solution_subgraph)
+    # print('try_placing_refill',solution_subgraph)
     # Place refill station
     solution_subgraph[LK.locations][key] = solution_test
     scoredSolution = calculateScore(mapName, solution_subgraph, mapEntity_subgraph, generalData)
@@ -301,35 +320,59 @@ def graph_beam_score(mapEntity, generalData, mapName):
         SK.total: 0,
     }    
     best_total = 0
+    maxK = 2
     for i in range(2):
         # reverse = i%2
         for C in sorted (nx.connected_components(G), key=lambda C: len(C), ): #reverse=reverse
             print("C",C)
+            K = min(maxK, len(C))
+            print(K)
             S = G.subgraph(C)
-            available = copy.deepcopy(C)
             mapEntity_subgraph, solution_subgraph, best_total = initize_solution_subgraph(C, solution, total_score, mapEntity, generalData, mapName)
             print(total_score, best_total, solution_subgraph)
+            bestk = []
+            heapq.heappush(bestk, KeyDict((0,0),{
+                LK.locations: dict(),
+                'terminated': False,
+            } ))
             # Place refill station at each step
-            while len(available):
-                print("step")
-                best_solution = None
-                best_footfall = 0
-                for key in available:
-                    for solution_test in [{LK.f9100Count: 1, LK.f3100Count: 0}, {LK.f9100Count: 0, LK.f3100Count: 1}]:
-                        total, footfall = try_placing_refill(solution_subgraph, key, solution_test, total_score, mapEntity_subgraph, generalData, mapName)
-                        print(key, S.nodes[key][LK.locationType], total, footfall, solution_subgraph)
-                        if total > best_total or (total == best_total and footfall > best_footfall):
-                            best_solution = {key: solution_test}
-                            best_total = total
-                            best_footfall = footfall
-                print(best_solution, solution_subgraph[LK.locations])
-                if best_solution is not None:
-                    # Place refill station in subgraph solution
-                    solution_subgraph[LK.locations].update(best_solution)
-                    available.remove(list(best_solution.keys())[0])
-                    # available -= set(nx.all_neighbors(S, key))
-                else: 
+            steps = 0
+            while True:
+                steps += 1
+                print("step",steps)
+                histories = copy.deepcopy(bestk)
+                for history in histories:
+                    if history.dct['terminated']:
+                        continue
+                    history = history.dct
+                    visited = set(history[LK.locations].keys())
+                    print("HIST:",history,C-visited)
+                    for key in C-visited:
+                        for solution_test in [{LK.f9100Count: 1, LK.f3100Count: 0}, {LK.f9100Count: 0, LK.f3100Count: 1}]:
+                            total, footfall = try_placing_refill(history, key, solution_test, total_score, mapEntity_subgraph, generalData, mapName)
+                            print(key, S.nodes[key][LK.locationType], total, footfall)
+                            if total > best_total:
+                                temp = copy.deepcopy(history)
+                                temp[LK.locations][key] = solution_test
+                                if len(bestk) < K:                            
+                                    heapq.heappush(bestk, KeyDict((total,footfall),{
+                                        LK.locations: temp[LK.locations],
+                                        'terminated': False,
+                                    }))
+                                else:
+                                    heapq.heappushpop(bestk, KeyDict((total,footfall),{
+                                        LK.locations: temp[LK.locations],
+                                        'terminated': False,
+                                    }))
+                            
+                            print("TEMP:",temp)
+                            print("BESTK",bestk)
+                for best_solution in bestk:
+                    if len(best_solution.dct[LK.locations]) < steps:
+                        best_solution.dct['terminated'] = True
+                if all([best_solution.dct['terminated'] for best_solution in bestk]):
                     break
+            solution_subgraph = heapq.nlargest(1,bestk)[0].dct
             print("subgraph",solution_subgraph[LK.locations], total_score)
             if solution_subgraph[LK.locations]:
                 # Place refill station in subgraph in solution
@@ -337,7 +380,7 @@ def graph_beam_score(mapEntity, generalData, mapName):
                 scoredSolution = calculateScore(mapName, solution_subgraph, mapEntity_subgraph, generalData)
                 update_total_score(total_score,scoredSolution,generalData,add=1)
             print("total_score",total_score)
-            print("TOTAL",calculateScore(mapName, solution, mapEntity, generalData)[SK.gameScore])
+            # print("TOTAL",calculateScore(mapName, solution, mapEntity, generalData)[SK.gameScore])
             print("------")
                 
                 
@@ -415,7 +458,8 @@ def algo(name, mapEntity,  generalData, mapName):
     func_map = {
         "graph_greedy": graph_greedy,
         "brute_force": brute_force,
-        "graph_greedy_score":graph_greedy_score
+        "graph_greedy_score":graph_greedy_score,
+        "graph_beam_score":graph_beam_score
     }
     func = func_map[name]
     return func(mapEntity,  generalData, mapName)
