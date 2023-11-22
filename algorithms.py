@@ -309,7 +309,7 @@ def graph_greedy_score(mapEntity, generalData, mapName):
     # solution = fix_refill_placement(solution, mapEntity, generalData, mapName)
     return solution
 
-def graph_beam_score(mapEntity, generalData, mapName):
+def graph_beam_score(mapEntity, generalData, mapName, maxK=20, maxL=4, reverse_task=True):
     G = create_graph(mapEntity, generalData)
     # Variables on solution and score
     solution = {LK.locations: dict()}
@@ -320,11 +320,10 @@ def graph_beam_score(mapEntity, generalData, mapName):
         SK.total: 0,
     }    
     best_total = 0
-    maxK = 20
-    maxL = 2
     for i in range(maxL):
-        # reverse = i%2
-        for C in sorted (nx.connected_components(G), key=lambda C: len(C), ): #reverse=reverse
+        reverse = i%2 if reverse_task else False
+        print("reverse",reverse)
+        for C in sorted (nx.connected_components(G), key=lambda C: len(C), reverse=reverse): #reverse=reverse
             print("C",C)
             K = min(maxK, len(C))
             print(K)
