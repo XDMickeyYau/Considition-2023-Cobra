@@ -214,7 +214,15 @@ def get_solution_subgreaph(solution, C):
         }
     return solution_subgraph
 
+def refine_footfall(scoredSolution):
+    footfall = 0
+    for node in scoredSolution[LK.locations]:
+        footfall += scoredSolution[LK.locations][node][LK.footfall]
+    scoredSolution[SK.gameScore][SK.totalFootfall] = footfall / 1000
+    return footfall
+
 def update_total_score(total_score,scoredSolution,generalData,add=1):
+    refine_footfall(scoredSolution)
     for score_key in total_score:
         total_score[score_key] += scoredSolution[SK.gameScore][score_key] * add
     total_score[SK.total] = (
@@ -232,9 +240,9 @@ def try_placing_refill(solution_subgraph, key, solution_test, total_score, mapEn
     # Place refill station
     solution_subgraph[LK.locations][key] = solution_test
     scoredSolution = calculateScore(mapName, solution_subgraph, mapEntity_subgraph, generalData)
+    footfall = refine_footfall(scoredSolution)
     # Check if score is better
     total = update_total_score(total_score,scoredSolution,generalData)  
-    footfall = scoredSolution[SK.gameScore][SK.totalFootfall]
     # Remove refill station
     update_total_score(total_score,scoredSolution,generalData,add=-1)
     solution_subgraph[LK.locations].pop(key) 
@@ -395,7 +403,7 @@ def graph_beam_score(mapEntity, generalData, mapName, maxK=20, maxL=4, reverse_t
     # solution = fix_refill_placement(solution, mapEntity, generalData, mapName)
     return solution
 
-def graph_brute_force_score(mapEntity, generalData, mapName, maxK=20, maxL=4, reverse_task=True):
+def graph_brute_force_score(mapEntity, generalData, mapName, maxK=20, maxL=4, reverse_task=False):
     G = create_graph(mapEntity, generalData)
     # Variables on solution and score
     solution = {LK.locations: dict()}
@@ -417,7 +425,7 @@ def graph_brute_force_score(mapEntity, generalData, mapName, maxK=20, maxL=4, re
             # Place refill station at each step
             solution_grid = dict()
             for node in C:
-                print(node, mapEntity_subgraph[LK.locations][node][LK.locationType])
+                print(node, mapEntity_subgraph[LK.locations][node][LK.locationType], mapEntity_subgraph[LK.locations][node][LK.footfall])
                 solution_grid[node] = [
                     None,
                     {
@@ -462,7 +470,7 @@ def graph_brute_force_score(mapEntity, generalData, mapName, maxK=20, maxL=4, re
                 update_total_score(total_score,scoredSolution,generalData,add=1)
                 print("subgraph",solution_subgraph[LK.locations], total_score)
             print("total_score",total_score)
-            # print("TOTAL",calculateScore(mapName, solution, mapEntity, generalData)[SK.gameScore])
+            print("TOTAL",calculateScore(mapName, solution, mapEntity, generalData)[SK.gameScore])
             print("------")
                 
                 
