@@ -11,8 +11,8 @@ Our solution employ a mix of beam-search and brute force algorithm
             4. add subgraph solution into total solution and update the total score 
 
 There are several design choice:
-- To speed up the socre calculation within a subgraph
-   - we calculate the score (earning, footfall, co2 saving) within a subgraph, avoiding the need to scanning through the whole map
+- To speed up the score calculation within a subgraph
+   - we run the scoring function (earning, footfall, co2 saving) within a subgraph, avoiding the need to scanning through the whole map
    - we have a total_score dict to keep track of the score metrics earned in other subgraphs
 - We scan through the map for several times
    - In the first loop, we have no information on the refill station placement no processed yet, thus effect of footfall and earning may not be accurate/underestimated. This affect the evaluation on the trade-off between footfall and earning
