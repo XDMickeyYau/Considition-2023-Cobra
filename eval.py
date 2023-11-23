@@ -17,9 +17,14 @@ apiKey = os.environ["apiKey"]
 mapNames = [MN.goteborg, MN.uppsala, MN.vasteras, MN.linkoping][::-1]
 results = []
 game_folder = "my_games"
-func_name = 'graph_brute_score' #'graph_beam_score'
-comment = "repeated greedy without neighbour"#"remove neighbor assumption"
-
+func_name = 'graph_mixed_score' #'graph_beam_score'
+args = {
+    "maxK":30, 
+    "maxL":4, 
+    "maxB":12, 
+    "reverse_task":False
+}
+comment = str(args)#"remove neighbor assumption"
 for mapName in mapNames:
     ##Get map data from Considition endpoint
     mapEntity = getMapData(mapName, apiKey)
@@ -30,7 +35,7 @@ for mapName in mapNames:
         # ------------------------------------------------------------
         # ----------------Player Algorithm goes here------------------
         print(f"Playing map {mapName}")
-        solution = algo(func_name,mapEntity, generalData, mapName)
+        solution = algo(func_name,mapEntity, generalData, mapName, **args)
         # ----------------End of player code--------------------------
         # ------------------------------------------------------------
 
