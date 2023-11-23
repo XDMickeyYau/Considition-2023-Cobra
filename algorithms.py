@@ -17,6 +17,7 @@ from functools import total_ordering
 
 @total_ordering
 class KeyDict(object):
+    """a custom class for ordering solutions in minheap"""
     def __init__(self, key, dct):
         self.key = key
         self.dct = dct
@@ -31,7 +32,14 @@ class KeyDict(object):
         return '{0.__class__.__name__}(key={0.key}, dct={0.dct})'.format(self)
 
 def create_graph(mapEntity, generalData):
-    """Create networkx graph from mapEntity"""
+    """Create networkx graph from mapEntity
+    1. For each location in map, add it to the graph
+    2. For each pair of locations, add edges if distance is less than willingness to travel
+    Returns
+    ------
+    graph
+        a networkx graph
+    """
     G = nx.Graph()
     # add nodes
     for key in mapEntity[LK.locations]:
@@ -54,13 +62,23 @@ def create_graph(mapEntity, generalData):
     return G
 
 def get_mapEntity_subgraph(mapEntity, C):
-    """get mapEntity within a subgraph C"""
+    """Get a subset of mapEntity where all the locations are in subgraph C
+    Returns
+    ------
+    mapEntity_subgraph
+        a subset of mapEntity in subgraph C
+    """
     mapEntity_subgraph = {k:v for k,v in mapEntity.items() if k != LK.locations}
     mapEntity_subgraph[LK.locations] = {key: mapEntity[LK.locations][key] for key in C}
     return mapEntity_subgraph
 
 def get_solution_subgreaph(solution, C):
-    """get solution within a subgraph C"""
+    """Get a subset of solution where all the locations are in subgraph C
+    Returns
+    ------
+    solution_subgraph
+        a subset of solution in subgraph C
+    """
     solution_subgraph = {
         LK.locations:{
             k:solution[LK.locations][k] for k in C if k in solution[LK.locations]
@@ -69,7 +87,12 @@ def get_solution_subgreaph(solution, C):
     return solution_subgraph
 
 def refine_footfall(scoredSolution):
-    """fix rounding error in footfall using scoredSolution"""
+    """Fix rounding error in footfall using scoredSolution calculated from the scoring function
+    Returns
+    ------
+    footfall
+        footfall fixed
+    """
     footfall = 0
     for node in scoredSolution[LK.locations]:
         footfall += scoredSolution[LK.locations][node][LK.footfall]
@@ -77,7 +100,13 @@ def refine_footfall(scoredSolution):
     return footfall
 
 def update_total_score(total_score,scoredSolution,generalData,add=1):
-    """update the game score dictionary total_score from scoredSolution of the subgraph"""
+    """Update the game score dictionary total_score using scoredSolution calculated from the scoring function
+    Returns
+    ------
+    total_score
+        total score updated
+    
+    """
     refine_footfall(scoredSolution)
     for score_key in total_score:
         total_score[score_key] += scoredSolution[SK.gameScore][score_key] * add
@@ -92,7 +121,17 @@ def update_total_score(total_score,scoredSolution,generalData,add=1):
     return total_score[SK.total]
 
 def try_placing_refill(solution_subgraph, key, solution_test, total_score, mapEntity_subgraph, generalData, mapName):
-    """Place refill stations on a sinlge location in a subgraph, then calculate the total score earned, then remove the refill stations placed"""
+    """Simulate the effect of placing a refill station in signle location in a subgraph
+    1. Place the refill stations 
+    2. Calculate the total score earned
+    3. Remove the refill stations
+    Returns
+    ------
+    total
+        total score would be earned
+    footfall
+        total footfall would be gained
+    """
     solution_subgraph[LK.locations][key] = solution_test
     scoredSolution = calculateScore(mapName, solution_subgraph, mapEntity_subgraph, generalData)
     footfall = refine_footfall(scoredSolution)
@@ -104,7 +143,20 @@ def try_placing_refill(solution_subgraph, key, solution_test, total_score, mapEn
     return total, footfall
 
 def initize_solution_subgraph(C, solution, total_score, mapEntity, generalData, mapName):
-    """Extract the mapEntity and solution from the subgraph, then reset the subgraph solution by removing all refills stations and the total score earned"""
+    """
+    Reset solutions in a subgraph C
+    1. Extract the mapEntity and solution from the subgraph
+    2. Reset the subgraph solution by removing all refills stations in C
+    3. Update the total score earned
+    Returns
+    ------    
+    mapEntity_subgraph
+        a subset of mapEntity in subgraph C
+    solution_subgraph
+        a subset of solution in subgraph C, resetted
+    total_score[SK.total]
+        total score updated
+    """
     # inotilize subgraph data and solution
     mapEntity_subgraph = get_mapEntity_subgraph(mapEntity, C)
     solution_subgraph = get_solution_subgreaph(solution, C)  
@@ -119,7 +171,20 @@ def initize_solution_subgraph(C, solution, total_score, mapEntity, generalData, 
     return mapEntity_subgraph, solution_subgraph, total_score[SK.total]
 
 def graph_mixed_score(mapEntity, generalData, mapName, maxK=1, maxL=4, maxB=1, reverse_task=True):
-    """Main fucntion of our solution, a mix of beam-search and brute force algorithm"""
+    """Main fucntion of our solution, a mix of beam-search and brute force algorithm
+    1. Create graph, initilize total solution, total score and best total score
+    2. Loop maxL times:
+        1. get a list of disconnected subgraph
+        2. For each subgraph:
+            1. Intitalize mapEntity, solution and total score in the subgraph
+            2. If subgraph size <= maxB, do brute force search for the best solution within the subgraph
+            3. Else, do beam search with width maxK for the best solution within the subgraph
+            4. add subgraph solution into total solution and update the total score 
+    Returns
+    ------    
+    solution
+        Total solution to be submitted         
+    """
     G = create_graph(mapEntity, generalData)
     # Variables on solution and score
     solution = {LK.locations: dict()}
@@ -226,6 +291,9 @@ def graph_mixed_score(mapEntity, generalData, mapName, maxK=1, maxL=4, maxB=1, r
 
 
 def algo(name, mapEntity,  generalData, mapName, **args):
+    """
+    Interface for eval.py
+    """
     func_map = {
         "graph_mixed_score":graph_mixed_score,
     }
