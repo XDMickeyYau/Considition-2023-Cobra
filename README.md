@@ -1,3 +1,25 @@
+# Algorithm
+Our solution employ a mix of beam-search and brute force algorithm
+    1. Create graph, initilize total solution, total score and best total score
+    2. Loop maxL times: 
+        1. get a list of disconnected subgraph
+        2. For each subgraph:
+            1. Intitalize mapEntity, solution and total score in the subgraph
+            2. If subgraph size <= maxB, do brute force search for the best solution within the subgraph
+            3. Else, do beam search with width maxK for the best solution within the subgraph
+            4. add subgraph solution into total solution and update the total score 
+
+There are several design choice:
+- To speed up the socre calculation within a subgraph
+   - we calculate the score (earning, footfall, co2 saving) within a subgraph, avoiding the need to scanning through the whole map
+   - we have a total_score dict to keep track of the score metrics earned in other subgraphs
+- We scan through the map for several times
+   - In the first loop, we have no information on the refill station placement no processed yet, thus effect of footfall and earning may not be accurate/underestimated. This affect the evaluation on the trade-off between footfall and earning
+   - In the subseqent loop, we already have the station placement in all other stations, allowing the algorithm to calcuate the score more accurately. this lead to better placement.
+
+
+
+
 # Introduction
 
 This is the submitted code of team Cobra in Considition 2023 using Python.
