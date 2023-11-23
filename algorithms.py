@@ -1,5 +1,6 @@
 import copy
 import itertools
+from multiprocessing import Pool
 import os
 import json
 
@@ -156,7 +157,7 @@ def update_subgraph(S, generalData):
         sales = aggregate_sales(key, S, generalData)
         S.nodes[key]['real_sales'] = sales
         deployment, score_dict = deploy_refill(S.nodes[key]['real_sales'], generalData)
-        # print(key, S.degree[key], S.nodes[key][LK.locationType], sales, deployment, score_dict)
+        # #print(key, S.degree[key], S.nodes[key][LK.locationType], sales, deployment, score_dict)
         if deployment is not None:      
             S.nodes[key]['solution'] = deployment
             S.nodes[key][SK.earnings] = score_dict[SK.earnings] / 1000
@@ -171,7 +172,7 @@ def deploy_subgraph(S, sorted_node, solution, total_score):
         if key not in disabled:
             name = S.nodes[key][LK.locationName]
             if 'solution' in S.nodes[key]:
-                # print(key, S.nodes[key][SK.earnings], S.nodes[key][SK.co2Savings], S.nodes[key]['score'], S.nodes[key][LK.footfall])
+                # #print(key, S.nodes[key][SK.earnings], S.nodes[key][SK.co2Savings], S.nodes[key]['score'], S.nodes[key][LK.footfall])
                 solution[LK.locations][name] = S.nodes[key]['solution']
                 total_score[SK.earnings] += S.nodes[key][SK.earnings] 
                 total_score[SK.co2Savings] += S.nodes[key][SK.co2Savings]
@@ -179,7 +180,7 @@ def deploy_subgraph(S, sorted_node, solution, total_score):
                 total_score['footfall'] += S.nodes[key][LK.footfall] 
             disabled.add(key)
             disabled.update(nx.all_neighbors(S, key))
-            # print("added")
+            # #print("added")
     return solution
 
 
@@ -197,8 +198,8 @@ def graph_greedy(mapEntity, generalData, mapName):
         S = update_subgraph(S, generalData)
         sorted_node = sorted(S.nodes(), key=lambda n: (S.nodes[n]['real_sales'], S.nodes[n][LK.footfall]),reverse=True)
         solution = deploy_subgraph(S, sorted_node, solution, total_score)
-    # print("total_score",total_score)
-    # print("total_score",total_score['base_score']*(1+total_score['footfall']))
+    # #print("total_score",total_score)
+    # #print("total_score",total_score['base_score']*(1+total_score['footfall']))
     return solution
 
 def get_mapEntity_subgraph(mapEntity, C):
@@ -236,7 +237,7 @@ def update_total_score(total_score,scoredSolution,generalData,add=1):
     return total_score[SK.total]
 
 def try_placing_refill(solution_subgraph, key, solution_test, total_score, mapEntity_subgraph, generalData, mapName):
-    # print('try_placing_refill',solution_subgraph)
+    # #print('try_placing_refill',solution_subgraph)
     # Place refill station
     solution_subgraph[LK.locations][key] = solution_test
     scoredSolution = calculateScore(mapName, solution_subgraph, mapEntity_subgraph, generalData)
@@ -254,7 +255,7 @@ def initize_solution_subgraph(C, solution, total_score, mapEntity, generalData, 
     solution_subgraph = get_solution_subgreaph(solution, C)  
     # Clear solution in subgraph
     if solution_subgraph[LK.locations]:
-        print("resetting total score")
+        #print("resetting total score")
         scoredSolution = calculateScore(mapName, solution_subgraph, mapEntity_subgraph, generalData)
         update_total_score(total_score,scoredSolution,generalData,add=-1)
         for key in solution_subgraph[LK.locations]:
@@ -276,25 +277,25 @@ def graph_greedy_score(mapEntity, generalData, mapName):
     for i in range(2):
         # reverse = i%2
         for C in sorted (nx.connected_components(G), key=lambda C: len(C), ): #reverse=reverse
-            print("C",C)
+            #print("C",C)
             S = G.subgraph(C)
             available = copy.deepcopy(C)
             mapEntity_subgraph, solution_subgraph, best_total = initize_solution_subgraph(C, solution, total_score, mapEntity, generalData, mapName)
-            print(total_score, best_total, solution_subgraph)
+            #print(total_score, best_total, solution_subgraph)
             # Place refill station at each step
             while len(available):
-                print("step")
+                #print("step")
                 best_solution = None
                 best_footfall = 0
                 for key in available:
                     for solution_test in [{LK.f9100Count: 1, LK.f3100Count: 0}, {LK.f9100Count: 0, LK.f3100Count: 1}]:
                         total, footfall = try_placing_refill(solution_subgraph, key, solution_test, total_score, mapEntity_subgraph, generalData, mapName)
-                        print(key, S.nodes[key][LK.locationType], total, footfall, solution_subgraph)
+                        #print(key, S.nodes[key][LK.locationType], total, footfall, solution_subgraph)
                         if total > best_total or (total == best_total and footfall > best_footfall):
                             best_solution = {key: solution_test}
                             best_total = total
                             best_footfall = footfall
-                print(best_solution, solution_subgraph[LK.locations])
+                #print(best_solution, solution_subgraph[LK.locations])
                 if best_solution is not None:
                     # Place refill station in subgraph solution
                     solution_subgraph[LK.locations].update(best_solution)
@@ -302,18 +303,18 @@ def graph_greedy_score(mapEntity, generalData, mapName):
                     # available -= set(nx.all_neighbors(S, key))
                 else: 
                     break
-            print("subgraph",solution_subgraph[LK.locations], total_score)
+            #print("subgraph",solution_subgraph[LK.locations], total_score)
             if solution_subgraph[LK.locations]:
                 # Place refill station in subgraph in solution
                 solution[LK.locations].update(solution_subgraph[LK.locations])
                 scoredSolution = calculateScore(mapName, solution_subgraph, mapEntity_subgraph, generalData)
                 update_total_score(total_score,scoredSolution,generalData,add=1)
-            print("total_score",total_score)
-            print("TOTAL",calculateScore(mapName, solution, mapEntity, generalData)[SK.gameScore])
-            print("------")
+            #print("total_score",total_score)
+            #print("TOTAL",calculateScore(mapName, solution, mapEntity, generalData)[SK.gameScore])
+            #print("------")
                 
                 
-            # print("total_score",cal_total_score(total_score,generalData), total_score)
+            # #print("total_score",cal_total_score(total_score,generalData), total_score)
     # solution = fix_refill_placement(solution, mapEntity, generalData, mapName)
     return solution
 
@@ -330,14 +331,14 @@ def graph_beam_score(mapEntity, generalData, mapName, maxK=20, maxL=4, reverse_t
     best_total = 0
     for i in range(maxL):
         reverse = i%2 if reverse_task else False
-        print("reverse",reverse)
+        #print("reverse",reverse)
         for C in sorted (nx.connected_components(G), key=lambda C: len(C), reverse=reverse): #reverse=reverse
-            print("C",C)
+            #print("C",C)
             K = min(maxK, len(C))
-            print(K)
+            #print(K)
             S = G.subgraph(C)
             mapEntity_subgraph, solution_subgraph, best_total = initize_solution_subgraph(C, solution, total_score, mapEntity, generalData, mapName)
-            print(total_score, best_total, solution_subgraph)
+            #print(total_score, best_total, solution_subgraph)
             bestk = []
             heapq.heappush(bestk, KeyDict((0,0),{
                 LK.locations: dict(),
@@ -347,21 +348,21 @@ def graph_beam_score(mapEntity, generalData, mapName, maxK=20, maxL=4, reverse_t
             steps = 0
             while True:
                 steps += 1
-                print("step",steps)
+                #print("step",steps)
                 histories = copy.deepcopy(bestk)
                 for history in histories:
                     if history.dct['terminated']:
                         continue
                     history = history.dct
                     visited = set(history[LK.locations].keys())
-                    print("HIST:",history,C-visited)
+                    #print("HIST:",history,C-visited)
                     for key in C-visited:
                         tmp_solution = None
                         tmp_total = 0
                         tmp_footfall = 0
                         for solution_test in [{LK.f9100Count: 1, LK.f3100Count: 0}, {LK.f9100Count: 0, LK.f3100Count: 1}]:
                             total, footfall = try_placing_refill(history, key, solution_test, total_score, mapEntity_subgraph, generalData, mapName)
-                            print(key, S.nodes[key][LK.locationType], total, footfall)
+                            #print(key, S.nodes[key][LK.locationType], total, footfall)
                             if total > tmp_total:
                                 tmp_solution = solution_test
                                 tmp_total = total       
@@ -380,26 +381,26 @@ def graph_beam_score(mapEntity, generalData, mapName, maxK=20, maxL=4, reverse_t
                                     'terminated': False,
                                 }))
                             
-                            print("TEMP:",temp)
-                            print("BESTK",bestk)
+                            #print("TEMP:",temp)
+                            #print("BESTK",bestk)
                 for best_solution in bestk:
                     if len(best_solution.dct[LK.locations]) < steps:
                         best_solution.dct['terminated'] = True
                 if all([best_solution.dct['terminated'] for best_solution in bestk]):
                     break
             solution_subgraph = heapq.nlargest(1,bestk)[0].dct
-            print("subgraph",solution_subgraph[LK.locations], total_score)
+            #print("subgraph",solution_subgraph[LK.locations], total_score)
             if solution_subgraph[LK.locations]:
                 # Place refill station in subgraph in solution
                 solution[LK.locations].update(solution_subgraph[LK.locations])
                 scoredSolution = calculateScore(mapName, solution_subgraph, mapEntity_subgraph, generalData)
                 update_total_score(total_score,scoredSolution,generalData,add=1)
-            print("total_score",total_score)
-            # print("TOTAL",calculateScore(mapName, solution, mapEntity, generalData)[SK.gameScore])
-            print("------")
+            #print("total_score",total_score)
+            # #print("TOTAL",calculateScore(mapName, solution, mapEntity, generalData)[SK.gameScore])
+            #print("------")
                 
                 
-            # print("total_score",cal_total_score(total_score,generalData), total_score)
+            # #print("total_score",cal_total_score(total_score,generalData), total_score)
     # solution = fix_refill_placement(solution, mapEntity, generalData, mapName)
     return solution
 
@@ -416,16 +417,16 @@ def graph_brute_force_score(mapEntity, generalData, mapName, maxK=20, maxL=4, re
     best_total = 0
     for i in range(maxL):
         reverse = i%2 if reverse_task else False
-        print("reverse",reverse)
+        #print("reverse",reverse)
         for C in sorted (nx.connected_components(G), key=lambda C: len(C), reverse=reverse): #reverse=reverse
-            print("C",C)
+            #print("C",C)
             # S = G.subgraph(C)
             mapEntity_subgraph, solution_subgraph, best_total = initize_solution_subgraph(C, solution, total_score, mapEntity, generalData, mapName)
-            print(total_score, best_total, solution_subgraph)
+            #print(total_score, best_total, solution_subgraph)
             # Place refill station at each step
             solution_grid = dict()
             for node in C:
-                print(node, mapEntity_subgraph[LK.locations][node][LK.locationType], mapEntity_subgraph[LK.locations][node][LK.footfall])
+                #print(node, mapEntity_subgraph[LK.locations][node][LK.locationType], mapEntity_subgraph[LK.locations][node][LK.footfall])
                 solution_grid[node] = [
                     None,
                     {
@@ -437,44 +438,44 @@ def graph_brute_force_score(mapEntity, generalData, mapName, maxK=20, maxL=4, re
                     LK.f3100Count: 0,
                     },    
                 ]
-                # print(G.degree[node], G.nodes[node][LK.locationType], solution_grid[node])
-            print("solution_grid",len(solution_grid))
+                # #print(G.degree[node], G.nodes[node][LK.locationType], solution_grid[node])
+            #print("solution_grid",len(solution_grid))
             L = [[(k, v) for v in vs] for k, vs in solution_grid.items()]
-            print("L",len(L))
+            #print("L",len(L))
             solution_tmps = list(map(dict, itertools.product(*L)))
-            print("POSSIBLE SOLUTION:", len(solution_tmps))
+            #print("POSSIBLE SOLUTION:", len(solution_tmps))
             best_solution = None
             # best_footfall = 0
             for solution_tmp in solution_tmps:
                 solution_tmp = {k:v for k,v in solution_tmp.items() if v is not None}
                 if not solution_tmp:
-                    print("None")
+                    #print("None")
                     continue
                 solution_tmp = {LK.locations: solution_tmp}
                 scoredSolution = calculateScore(mapName, solution_tmp, mapEntity_subgraph, generalData)
                 total = update_total_score(total_score,scoredSolution,generalData,add=1)
                 # footfall = total_score[SK.totalFootfall]
-                print(solution_tmp, total)
+                #print(solution_tmp, total)
                 if total > best_total: #or (total == best_total and footfall > best_footfall):
                     best_solution = solution_tmp
                     best_total = total
                     # best_footfall = total_score[SK.totalFootfall]
                 update_total_score(total_score,scoredSolution,generalData,add=-1)
-            print("best_solution",best_solution)
+            #print("best_solution",best_solution)
             if best_solution is not None:
                 # Place refill station in subgraph in solution
                 solution_subgraph = best_solution
                 solution[LK.locations].update(solution_subgraph[LK.locations])
-                print("solution_subgraph",solution_subgraph)
+                #print("solution_subgraph",solution_subgraph)
                 scoredSolution = calculateScore(mapName, solution_subgraph, mapEntity_subgraph, generalData)
                 update_total_score(total_score,scoredSolution,generalData,add=1)
-                print("subgraph",solution_subgraph[LK.locations], total_score)
-            print("total_score",total_score)
-            print("TOTAL",calculateScore(mapName, solution, mapEntity, generalData)[SK.gameScore])
-            print("------")
+                #print("subgraph",solution_subgraph[LK.locations], total_score)
+            #print("total_score",total_score)
+            #print("TOTAL",calculateScore(mapName, solution, mapEntity, generalData)[SK.gameScore])
+            #print("------")
                 
                 
-            # print("total_score",cal_total_score(total_score,generalData), total_score)
+            # #print("total_score",cal_total_score(total_score,generalData), total_score)
     # solution = fix_refill_placement(solution, mapEntity, generalData, mapName)
     return solution
 
@@ -491,19 +492,19 @@ def graph_mixed_score(mapEntity, generalData, mapName, maxK=1, maxL=4, maxB=1, r
     best_total = 0
     for i in range(maxL):
         reverse = i%2 if reverse_task else False
-        print("reverse",reverse)
+        #print("reverse",reverse)
         for C in sorted (nx.connected_components(G), key=lambda C: len(C), reverse=reverse): #reverse=reverse
-            print("C",C)
+            #print("C",C)
             K = min(maxK, len(C))
-            print(K)
+            #print(K)
             S = G.subgraph(C)
             mapEntity_subgraph, solution_subgraph, best_total = initize_solution_subgraph(C, solution, total_score, mapEntity, generalData, mapName)
-            print(total_score, best_total, solution_subgraph)
+            #print(total_score, best_total, solution_subgraph)
             if len(C) <= maxB:
                  # Place refill station at each step
                 solution_grid = dict()
                 for node in C:
-                    print(node, mapEntity_subgraph[LK.locations][node][LK.locationType], mapEntity_subgraph[LK.locations][node][LK.footfall])
+                    #print(node, mapEntity_subgraph[LK.locations][node][LK.locationType], mapEntity_subgraph[LK.locations][node][LK.footfall])
                     solution_grid[node] = [
                         None,
                         {
@@ -515,30 +516,30 @@ def graph_mixed_score(mapEntity, generalData, mapName, maxK=1, maxL=4, maxB=1, r
                         LK.f3100Count: 0,
                         },    
                     ]
-                    # print(G.degree[node], G.nodes[node][LK.locationType], solution_grid[node])
-                print("solution_grid",len(solution_grid))
+                    # #print(G.degree[node], G.nodes[node][LK.locationType], solution_grid[node])
+                #print("solution_grid",len(solution_grid))
                 L = [[(k, v) for v in vs] for k, vs in solution_grid.items()]
-                print("L",len(L))
+                #print("L",len(L))
                 solution_tmps = list(map(dict, itertools.product(*L)))
-                print("POSSIBLE SOLUTION:", len(solution_tmps))
+                #print("POSSIBLE SOLUTION:", len(solution_tmps))
                 best_solution = None
                 # best_footfall = 0
                 for solution_tmp in solution_tmps:
                     solution_tmp = {k:v for k,v in solution_tmp.items() if v is not None}
                     if not solution_tmp:
-                        print("None")
+                        #print("None")
                         continue
                     solution_tmp = {LK.locations: solution_tmp}
                     scoredSolution = calculateScore(mapName, solution_tmp, mapEntity_subgraph, generalData)
                     total = update_total_score(total_score,scoredSolution,generalData,add=1)
                     # footfall = total_score[SK.totalFootfall]
-                    print(solution_tmp, total)
+                    #print(solution_tmp, total)
                     if total > best_total: #or (total == best_total and footfall > best_footfall):
                         best_solution = solution_tmp
                         best_total = total
                         # best_footfall = total_score[SK.totalFootfall]
                     update_total_score(total_score,scoredSolution,generalData,add=-1)
-                print("best_solution",best_solution)
+                #print("best_solution",best_solution)
                 solution_subgraph = best_solution
             else:
                 bestk = []
@@ -550,21 +551,21 @@ def graph_mixed_score(mapEntity, generalData, mapName, maxK=1, maxL=4, maxB=1, r
                 steps = 0
                 while True:
                     steps += 1
-                    print("step",steps)
+                    #print("step",steps)
                     histories = copy.deepcopy(bestk)
                     for history in histories:
                         if history.dct['terminated']:
                             continue
                         history = history.dct
                         visited = set(history[LK.locations].keys())
-                        print("HIST:",history,C-visited)
+                        #print("HIST:",history,C-visited)
                         for key in C-visited:
                             tmp_solution = None
                             tmp_total = 0
                             tmp_footfall = 0
                             for solution_test in [{LK.f9100Count: 1, LK.f3100Count: 0}, {LK.f9100Count: 0, LK.f3100Count: 1}]:
                                 total, footfall = try_placing_refill(history, key, solution_test, total_score, mapEntity_subgraph, generalData, mapName)
-                                print(key, S.nodes[key][LK.locationType], total, footfall)
+                                #print(key, S.nodes[key][LK.locationType], total, footfall)
                                 if total > tmp_total:
                                     tmp_solution = solution_test
                                     tmp_total = total       
@@ -583,8 +584,8 @@ def graph_mixed_score(mapEntity, generalData, mapName, maxK=1, maxL=4, maxB=1, r
                                         'terminated': False,
                                     }))
                                 
-                                print("TEMP:",temp)
-                                print("BESTK",bestk)
+                                #print("TEMP:",temp)
+                                #print("BESTK",bestk)
                     for best_solution in bestk:
                         if len(best_solution.dct[LK.locations]) < steps:
                             best_solution.dct['terminated'] = True
@@ -593,17 +594,17 @@ def graph_mixed_score(mapEntity, generalData, mapName, maxK=1, maxL=4, maxB=1, r
                 solution_subgraph = heapq.nlargest(1,bestk)[0].dct
             
             if solution_subgraph and solution_subgraph[LK.locations]:
-                print("subgraph",solution_subgraph[LK.locations])
+                #print("subgraph",solution_subgraph[LK.locations])
                 # Place refill station in subgraph in solution
                 solution[LK.locations].update(solution_subgraph[LK.locations])
                 scoredSolution = calculateScore(mapName, solution_subgraph, mapEntity_subgraph, generalData)
                 update_total_score(total_score,scoredSolution,generalData,add=1)
-            print("total_score",total_score)
-            # print("TOTAL",calculateScore(mapName, solution, mapEntity, generalData)[SK.gameScore])
-            print("------")
+            #print("total_score",total_score)
+            # #print("TOTAL",calculateScore(mapName, solution, mapEntity, generalData)[SK.gameScore])
+            #print("------")
                 
                 
-            # print("total_score",cal_total_score(total_score,generalData), total_score)
+            # #print("total_score",cal_total_score(total_score,generalData), total_score)
     # solution = fix_refill_placement(solution, mapEntity, generalData, mapName)
     return solution
 
@@ -636,10 +637,10 @@ def deploy_refill_simple(locationtype):
         return None
 
 def brute_force(mapEntity, generalData, mapName):
-    print("brute force")
+    #print("brute force")
     solution_grid = dict()
     G = create_graph(mapEntity, generalData)
-    print("graph created")
+    #print("graph created")
     for node in G.nodes:
         if G.degree[node] == 0:
             solution_grid[node] = [deploy_refill_simple(G.nodes[node][LK.locationType])]
@@ -655,12 +656,12 @@ def brute_force(mapEntity, generalData, mapName):
                 LK.f3100Count: 0,
                 },    
             ]
-        # print(G.degree[node], G.nodes[node][LK.locationType], solution_grid[node])
-    print("solution_grid",len(solution_grid))
+        # #print(G.degree[node], G.nodes[node][LK.locationType], solution_grid[node])
+    #print("solution_grid",len(solution_grid))
     L = [[(k, v) for v in vs] for k, vs in solution_grid.items()]
-    print("L",len(L))
+    #print("L",len(L))
     solutions = list(map(dict, itertools.product(*L)))
-    print("POSSIBLE SOLUTION:", len(solutions))
+    #print("POSSIBLE SOLUTION:", len(solutions))
     max_score = 0
     max_solution = None
     for solution in solutions:
