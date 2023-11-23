@@ -478,7 +478,7 @@ def graph_brute_force_score(mapEntity, generalData, mapName, maxK=20, maxL=4, re
     # solution = fix_refill_placement(solution, mapEntity, generalData, mapName)
     return solution
 
-def graph_mixed_score(mapEntity, generalData, mapName, maxK=20, maxL=4, reverse_task=True):
+def graph_mixed_score(mapEntity, generalData, mapName, maxK=1, maxL=4, maxB=1, reverse_task=True):
     G = create_graph(mapEntity, generalData)
     # Variables on solution and score
     solution = {LK.locations: dict()}
@@ -499,58 +499,101 @@ def graph_mixed_score(mapEntity, generalData, mapName, maxK=20, maxL=4, reverse_
             S = G.subgraph(C)
             mapEntity_subgraph, solution_subgraph, best_total = initize_solution_subgraph(C, solution, total_score, mapEntity, generalData, mapName)
             print(total_score, best_total, solution_subgraph)
-            bestk = []
-            heapq.heappush(bestk, KeyDict((0,0),{
-                LK.locations: dict(),
-                'terminated': False,
-            } ))
-            # Place refill station at each step
-            steps = 0
-            while True:
-                steps += 1
-                print("step",steps)
-                histories = copy.deepcopy(bestk)
-                for history in histories:
-                    if history.dct['terminated']:
+            if len(C) <= maxB:
+                 # Place refill station at each step
+                solution_grid = dict()
+                for node in C:
+                    print(node, mapEntity_subgraph[LK.locations][node][LK.locationType], mapEntity_subgraph[LK.locations][node][LK.footfall])
+                    solution_grid[node] = [
+                        None,
+                        {
+                        LK.f9100Count: 0,
+                        LK.f3100Count: 1,
+                        },
+                        {
+                        LK.f9100Count: 1,
+                        LK.f3100Count: 0,
+                        },    
+                    ]
+                    # print(G.degree[node], G.nodes[node][LK.locationType], solution_grid[node])
+                print("solution_grid",len(solution_grid))
+                L = [[(k, v) for v in vs] for k, vs in solution_grid.items()]
+                print("L",len(L))
+                solution_tmps = list(map(dict, itertools.product(*L)))
+                print("POSSIBLE SOLUTION:", len(solution_tmps))
+                best_solution = None
+                # best_footfall = 0
+                for solution_tmp in solution_tmps:
+                    solution_tmp = {k:v for k,v in solution_tmp.items() if v is not None}
+                    if not solution_tmp:
+                        print("None")
                         continue
-                    history = history.dct
-                    visited = set(history[LK.locations].keys())
-                    print("HIST:",history,C-visited)
-                    for key in C-visited:
-                        tmp_solution = None
-                        tmp_total = 0
-                        tmp_footfall = 0
-                        for solution_test in [{LK.f9100Count: 1, LK.f3100Count: 0}, {LK.f9100Count: 0, LK.f3100Count: 1}]:
-                            total, footfall = try_placing_refill(history, key, solution_test, total_score, mapEntity_subgraph, generalData, mapName)
-                            print(key, S.nodes[key][LK.locationType], total, footfall)
-                            if total > tmp_total:
-                                tmp_solution = solution_test
-                                tmp_total = total       
-                                tmp_footfall = footfall          
-                        if tmp_total > best_total:
-                            temp = copy.deepcopy(history)
-                            temp[LK.locations][key] = tmp_solution
-                            if len(bestk) < K:                            
-                                heapq.heappush(bestk, KeyDict((tmp_total,tmp_footfall),{
-                                    LK.locations: temp[LK.locations],
-                                    'terminated': False,
-                                }))
-                            else:
-                                heapq.heappushpop(bestk, KeyDict((tmp_total,tmp_footfall),{
-                                    LK.locations: temp[LK.locations],
-                                    'terminated': False,
-                                }))
-                            
-                            print("TEMP:",temp)
-                            print("BESTK",bestk)
-                for best_solution in bestk:
-                    if len(best_solution.dct[LK.locations]) < steps:
-                        best_solution.dct['terminated'] = True
-                if all([best_solution.dct['terminated'] for best_solution in bestk]):
-                    break
-            solution_subgraph = heapq.nlargest(1,bestk)[0].dct
-            print("subgraph",solution_subgraph[LK.locations], total_score)
-            if solution_subgraph[LK.locations]:
+                    solution_tmp = {LK.locations: solution_tmp}
+                    scoredSolution = calculateScore(mapName, solution_tmp, mapEntity_subgraph, generalData)
+                    total = update_total_score(total_score,scoredSolution,generalData,add=1)
+                    # footfall = total_score[SK.totalFootfall]
+                    print(solution_tmp, total)
+                    if total > best_total: #or (total == best_total and footfall > best_footfall):
+                        best_solution = solution_tmp
+                        best_total = total
+                        # best_footfall = total_score[SK.totalFootfall]
+                    update_total_score(total_score,scoredSolution,generalData,add=-1)
+                print("best_solution",best_solution)
+                solution_subgraph = best_solution
+            else:
+                bestk = []
+                heapq.heappush(bestk, KeyDict((0,0),{
+                    LK.locations: dict(),
+                    'terminated': False,
+                } ))
+                # Place refill station at each step
+                steps = 0
+                while True:
+                    steps += 1
+                    print("step",steps)
+                    histories = copy.deepcopy(bestk)
+                    for history in histories:
+                        if history.dct['terminated']:
+                            continue
+                        history = history.dct
+                        visited = set(history[LK.locations].keys())
+                        print("HIST:",history,C-visited)
+                        for key in C-visited:
+                            tmp_solution = None
+                            tmp_total = 0
+                            tmp_footfall = 0
+                            for solution_test in [{LK.f9100Count: 1, LK.f3100Count: 0}, {LK.f9100Count: 0, LK.f3100Count: 1}]:
+                                total, footfall = try_placing_refill(history, key, solution_test, total_score, mapEntity_subgraph, generalData, mapName)
+                                print(key, S.nodes[key][LK.locationType], total, footfall)
+                                if total > tmp_total:
+                                    tmp_solution = solution_test
+                                    tmp_total = total       
+                                    tmp_footfall = footfall          
+                            if tmp_total > best_total:
+                                temp = copy.deepcopy(history)
+                                temp[LK.locations][key] = tmp_solution
+                                if len(bestk) < K:                            
+                                    heapq.heappush(bestk, KeyDict((tmp_total,tmp_footfall),{
+                                        LK.locations: temp[LK.locations],
+                                        'terminated': False,
+                                    }))
+                                else:
+                                    heapq.heappushpop(bestk, KeyDict((tmp_total,tmp_footfall),{
+                                        LK.locations: temp[LK.locations],
+                                        'terminated': False,
+                                    }))
+                                
+                                print("TEMP:",temp)
+                                print("BESTK",bestk)
+                    for best_solution in bestk:
+                        if len(best_solution.dct[LK.locations]) < steps:
+                            best_solution.dct['terminated'] = True
+                    if all([best_solution.dct['terminated'] for best_solution in bestk]):
+                        break
+                solution_subgraph = heapq.nlargest(1,bestk)[0].dct
+            
+            if solution_subgraph and solution_subgraph[LK.locations]:
+                print("subgraph",solution_subgraph[LK.locations])
                 # Place refill station in subgraph in solution
                 solution[LK.locations].update(solution_subgraph[LK.locations])
                 scoredSolution = calculateScore(mapName, solution_subgraph, mapEntity_subgraph, generalData)
@@ -629,13 +672,14 @@ def brute_force(mapEntity, generalData, mapName):
             max_solution = solution
     return max_solution
 
-def algo(name, mapEntity,  generalData, mapName):
+def algo(name, mapEntity,  generalData, mapName, **args):
     func_map = {
         "graph_greedy": graph_greedy,
         "brute_force": brute_force,
         "graph_greedy_score":graph_greedy_score,
         "graph_beam_score":graph_beam_score,
-        "graph_brute_score":graph_brute_force_score
+        "graph_brute_score":graph_brute_force_score,
+        "graph_mixed_score":graph_mixed_score,
     }
     func = func_map[name]
-    return func(mapEntity,  generalData, mapName)
+    return func(mapEntity,  generalData, mapName, **args)
