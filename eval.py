@@ -1,5 +1,8 @@
 import os
 import json
+import time
+
+from sklearn.model_selection import ParameterGrid
 from algorithms import algo
 from scoring import calculateScore
 from api import getGeneralData, getMapData, submit
@@ -14,19 +17,24 @@ import pandas as pd
 load_dotenv()
 apiKey = os.environ["apiKey"]
 
-mapNames = [MN.goteborg, MN.uppsala, MN.vasteras, MN.linkoping][::-1]
+mapNames = [MN.goteborg]#[MN.goteborg, MN.uppsala, MN.vasteras, MN.linkoping][::-1]
 results = []
 game_folder = "my_games"
 func_name = 'graph_mixed_score' #'graph_beam_score'
-args = {
-    "maxK":30, 
-    "maxL":4, 
-    "maxB":12, 
-    "reverse_task":False
+args_grid = {
+    "mapNames": mapNames,
+    "maxK":[1,5,10,30], 
+    "maxL":[1,2,4], 
+    "reverse_task":[False,True],
+    "maxB":[1,5,10], 
 }
-comment = str(args)#"remove neighbor assumption"
-for mapName in mapNames:
+args_grid = ParameterGrid(args_grid)
+
+for args  in args_grid:
     ##Get map data from Considition endpoint
+    print("args:",args)
+    mapName = args.pop("mapNames")
+    comment = str(args)
     mapEntity = getMapData(mapName, apiKey)
     ##Get non map specific data from Considition endpoint
     generalData = getGeneralData()
@@ -35,7 +43,10 @@ for mapName in mapNames:
         # ------------------------------------------------------------
         # ----------------Player Algorithm goes here------------------
         print(f"Playing map {mapName}")
+        start = time.time()
         solution = algo(func_name,mapEntity, generalData, mapName, **args)
+        duration = time.time()-start
+        print(f"Duration: {duration}")
         # ----------------End of player code--------------------------
         # ------------------------------------------------------------
 
@@ -60,15 +71,12 @@ for mapName in mapNames:
             print(f"Score: {scoredSolution[SK.gameScore]}")
 
         result = pd.Series(score[SK.gameScore]).to_frame().T
+        result.insert(0, 'duration', duration)
         result.insert(0, 'mapName', mapName)
-        results.append(result)
-
-results = pd.concat(results,axis=0)
-results.insert(0, 'func_name', func_name)
-results.insert(0, 'timestamp', pd.Timestamp.now())
-results.insert(0, 'comment', comment)
-print(results)
-if not os.path.exists('results.csv'):
-    results.to_csv('results.csv', index=False, mode='x',header=True)
-else:
-    results.to_csv('results.csv', index=False, mode='a',header=False)
+        result.insert(1, 'func_name', func_name)
+        result.insert(1, 'timestamp', pd.Timestamp.now())
+        result.insert(1, 'comment', comment)
+        if not os.path.exists('results.csv'):
+            result.to_csv('results.csv', index=False, mode='x',header=True)
+        else:
+            result.to_csv('results.csv', index=False, mode='a',header=False)

@@ -334,7 +334,7 @@ def graph_beam_score(mapEntity, generalData, mapName, maxK=20, maxL=4, reverse_t
         #print("reverse",reverse)
         for C in sorted (nx.connected_components(G), key=lambda C: len(C), reverse=reverse): #reverse=reverse
             #print("C",C)
-            K = min(maxK, len(C))
+            K = maxK #min(maxK, len(C))
             #print(K)
             S = G.subgraph(C)
             mapEntity_subgraph, solution_subgraph, best_total = initize_solution_subgraph(C, solution, total_score, mapEntity, generalData, mapName)
@@ -442,7 +442,7 @@ def graph_brute_force_score(mapEntity, generalData, mapName, maxK=20, maxL=4, re
             #print("solution_grid",len(solution_grid))
             L = [[(k, v) for v in vs] for k, vs in solution_grid.items()]
             #print("L",len(L))
-            solution_tmps = list(map(dict, itertools.product(*L)))
+            solution_tmps = map(dict, itertools.product(*L))
             #print("POSSIBLE SOLUTION:", len(solution_tmps))
             best_solution = None
             # best_footfall = 0
