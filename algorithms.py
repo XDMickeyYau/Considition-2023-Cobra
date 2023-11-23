@@ -492,8 +492,11 @@ def graph_mixed_score(mapEntity, generalData, mapName, maxK=1, maxL=4, maxB=1, r
     best_total = 0
     for i in range(maxL):
         reverse = i%2 if reverse_task else False
+        subgraphsss = sorted (nx.connected_components(G), key=lambda C: len(C), reverse=reverse)
+        print("len")
+        print([len(i) for i in subgraphsss[-5:-1]])
         #print("reverse",reverse)
-        for C in sorted (nx.connected_components(G), key=lambda C: len(C), reverse=reverse): #reverse=reverse
+        for C in subgraphsss: #reverse=reverse
             #print("C",C)
             K = min(maxK, len(C))
             #print(K)
