@@ -1,5 +1,6 @@
 import os
 import json
+import time
 from algorithms import algo
 from scoring import calculateScore
 from api import getGeneralData, getMapData, submit
@@ -17,12 +18,13 @@ apiKey = os.environ["apiKey"]
 mapNames = [MN.goteborg, MN.uppsala, MN.vasteras, MN.linkoping][::-1]
 results = []
 game_folder = "my_games"
-func_name = 'graph_mixed_score' #'graph_beam_score'
+func_name = 'graph_brute_score' #'graph_beam_score'
 args = {
     "maxK":30, 
     "maxL":4, 
-    "maxB":12, 
-    "reverse_task":False
+    "maxB":20, 
+    "reverse_task":False,
+    "processes":16
 }
 comment = str(args)#"remove neighbor assumption"
 for mapName in mapNames:
@@ -35,7 +37,9 @@ for mapName in mapNames:
         # ------------------------------------------------------------
         # ----------------Player Algorithm goes here------------------
         print(f"Playing map {mapName}")
+        start = time.time()
         solution = algo(func_name,mapEntity, generalData, mapName, **args)
+        duration = time.time()-start
         # ----------------End of player code--------------------------
         # ------------------------------------------------------------
 
@@ -66,7 +70,8 @@ for mapName in mapNames:
 results = pd.concat(results,axis=0)
 results.insert(0, 'func_name', func_name)
 results.insert(0, 'timestamp', pd.Timestamp.now())
-results.insert(0, 'comment', comment)
+results.insert(1, 'comment', comment)
+results.insert(1, 'duration', duration)
 print(results)
 if not os.path.exists('results.csv'):
     results.to_csv('results.csv', index=False, mode='x',header=True)

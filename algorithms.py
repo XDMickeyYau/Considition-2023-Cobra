@@ -1,5 +1,6 @@
 import copy
 import itertools
+from itertools import repeat
 from multiprocessing import Pool
 import os
 import json
@@ -404,17 +405,35 @@ def graph_beam_score(mapEntity, generalData, mapName, maxK=20, maxL=4, reverse_t
     # solution = fix_refill_placement(solution, mapEntity, generalData, mapName)
     return solution
 
-def graph_brute_force_score(mapEntity, generalData, mapName, maxK=20, maxL=4, reverse_task=False):
+best_total = 0
+best_solution = None
+total_score = {
+    SK.co2Savings: 0,
+    SK.totalFootfall: 0,
+    SK.earnings: 0,
+    SK.total: 0,
+}  
+
+def brute_force_process_subgraph(solution, mapName, mapEntity, generalData):
+    global best_total, best_solution, total_score
+    solution = {k: v for k, v in solution.items() if v is not None}
+    if not solution:
+        return
+    solution = {LK.locations: solution}
+    scoredSolution = calculateScore(mapName, solution, mapEntity, generalData)
+    if scoredSolution[LK.locations]:
+        total = update_total_score(total_score,scoredSolution,generalData,add=1)
+        if total > best_total:
+            best_solution = solution
+            best_total = total
+        update_total_score(total_score,scoredSolution,generalData,add=-1)
+
+
+def graph_brute_force_score(mapEntity, generalData, mapName, maxK=20, maxL=4, reverse_task=False, processes=32, **args):
+    global max_score, max_solution
     G = create_graph(mapEntity, generalData)
     # Variables on solution and score
     solution = {LK.locations: dict()}
-    total_score = {
-        SK.co2Savings: 0,
-        SK.totalFootfall: 0,
-        SK.earnings: 0,
-        SK.total: 0,
-    }    
-    best_total = 0
     for i in range(maxL):
         reverse = i%2 if reverse_task else False
         #print("reverse",reverse)
@@ -446,21 +465,8 @@ def graph_brute_force_score(mapEntity, generalData, mapName, maxK=20, maxL=4, re
             #print("POSSIBLE SOLUTION:", len(solution_tmps))
             best_solution = None
             # best_footfall = 0
-            for solution_tmp in solution_tmps:
-                solution_tmp = {k:v for k,v in solution_tmp.items() if v is not None}
-                if not solution_tmp:
-                    #print("None")
-                    continue
-                solution_tmp = {LK.locations: solution_tmp}
-                scoredSolution = calculateScore(mapName, solution_tmp, mapEntity_subgraph, generalData)
-                total = update_total_score(total_score,scoredSolution,generalData,add=1)
-                # footfall = total_score[SK.totalFootfall]
-                #print(solution_tmp, total)
-                if total > best_total: #or (total == best_total and footfall > best_footfall):
-                    best_solution = solution_tmp
-                    best_total = total
-                    # best_footfall = total_score[SK.totalFootfall]
-                update_total_score(total_score,scoredSolution,generalData,add=-1)
+            with Pool(processes) as pool:
+                pool.starmap(brute_force_process_subgraph, zip(solution_tmps, repeat(mapName), repeat(mapEntity), repeat(generalData)))
             #print("best_solution",best_solution)
             if best_solution is not None:
                 # Place refill station in subgraph in solution
