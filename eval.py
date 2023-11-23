@@ -16,8 +16,9 @@ apiKey = os.environ["apiKey"]
 
 mapNames = [MN.goteborg, MN.uppsala, MN.vasteras, MN.linkoping][::-1]
 results = []
-func_name = 'brute_force'
-comment = "naive_ver3"
+game_folder = "my_games"
+func_name = 'graph_brute_score' #'graph_beam_score'
+comment = "repeated greedy without neighbour"#"remove neighbor assumption"
 
 for mapName in mapNames:
     ##Get map data from Considition endpoint
@@ -35,12 +36,27 @@ for mapName in mapNames:
 
         # Score solution locally
         score = calculateScore(mapName, solution, mapEntity, generalData)
-        print(mapName, score[SK.gameScore])
+        print(f"Score: {score[SK.gameScore]}")
+        id_ = score[SK.gameId]
+        print(f"Storing game with id {id_}.")
+        print(f"Enter {id_} into visualization.ipynb for local vizualization ")
+
+        # Store solution locally for visualization
+        with open(f"{game_folder}/{id_}.json", "w", encoding="utf8") as f:
+            json.dump(score, f, indent=4)
+
+        # Submit and and get score from Considition app
+        print(f"Submitting solution to Considtion 2023 \n")
+
+        scoredSolution = submit(mapName, solution, apiKey)
+        if scoredSolution:
+            print("Successfully submitted game")
+            print(f"id: {scoredSolution[SK.gameId]}")
+            print(f"Score: {scoredSolution[SK.gameScore]}")
 
         result = pd.Series(score[SK.gameScore]).to_frame().T
         result.insert(0, 'mapName', mapName)
         results.append(result)
-        
 
 results = pd.concat(results,axis=0)
 results.insert(0, 'func_name', func_name)
