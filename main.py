@@ -1,6 +1,5 @@
 import os
 import json
-from algorithms import naive_ver2
 from scoring import calculateScore
 from api import getGeneralData, getMapData, submit
 from data_keys import (
