@@ -17,7 +17,9 @@ There are several design choice:
 - We scan through the map for several times
    - In the first loop, we have no information on the refill station placement no processed yet, thus effect of footfall and earning may not be accurate/underestimated. This affect the evaluation on the trade-off between footfall and earning
    - In the subseqent loop, we already have the station placement in all other stations, allowing the algorithm to calcuate the score more accurately. this lead to better placement.
-
+- We deicde which algorithm to run depending on the subgraph size
+   - If the size is small, brute force would be used to get higher score while mainitaining a reasonable runtime
+   - If the size is large, beam search would be used to speed up the processing time while getting a reasonably high score
 
 
 
