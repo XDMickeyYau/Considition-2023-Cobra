@@ -17,16 +17,16 @@ import pandas as pd
 load_dotenv()
 apiKey = os.environ["apiKey"]
 
-mapNames = [MN.goteborg]#[MN.goteborg, MN.uppsala, MN.vasteras, MN.linkoping][::-1]
+mapNames = [MN.stockholm]#[MN.goteborg, MN.uppsala, MN.vasteras, MN.linkoping][::-1]
 results = []
 game_folder = "my_games"
 func_name = 'graph_mixed_score' #'graph_beam_score'
 args_grid = {
     "mapNames": mapNames,
-    "maxK":[1,5,10,30], 
-    "maxL":[1,2,4], 
-    "reverse_task":[False,True],
-    "maxB":[1,5,10], 
+    "maxK":[5,10], 
+    "maxL":[2], 
+    "reverse_task":[False],
+    "maxB":[5,10], 
 }
 args_grid = ParameterGrid(args_grid)
 
