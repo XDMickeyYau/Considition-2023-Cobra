@@ -395,6 +395,92 @@ def graph_beam_score(mapEntity, generalData, mapName, maxK=20, maxL=4, reverse_t
     # solution = fix_refill_placement(solution, mapEntity, generalData, mapName)
     return solution
 
+def graph_brute_force_score(mapEntity, generalData, mapName, maxK=20, maxL=4, reverse_task=True):
+    G = create_graph(mapEntity, generalData)
+    # Variables on solution and score
+    solution = {LK.locations: dict()}
+    total_score = {
+        SK.co2Savings: 0,
+        SK.totalFootfall: 0,
+        SK.earnings: 0,
+        SK.total: 0,
+    }    
+    best_total = 0
+    for i in range(maxL):
+        reverse = i%2 if reverse_task else False
+        print("reverse",reverse)
+        for C in sorted (nx.connected_components(G), key=lambda C: len(C), reverse=reverse): #reverse=reverse
+            print("C",C)
+            K = min(maxK, len(C))
+            print(K)
+            S = G.subgraph(C)
+            mapEntity_subgraph, solution_subgraph, best_total = initize_solution_subgraph(C, solution, total_score, mapEntity, generalData, mapName)
+            print(total_score, best_total, solution_subgraph)
+            bestk = []
+            heapq.heappush(bestk, KeyDict((0,0),{
+                LK.locations: dict(),
+                'terminated': False,
+            } ))
+            # Place refill station at each step
+            steps = 0
+            while True:
+                steps += 1
+                print("step",steps)
+                histories = copy.deepcopy(bestk)
+                for history in histories:
+                    if history.dct['terminated']:
+                        continue
+                    history = history.dct
+                    visited = set(history[LK.locations].keys())
+                    print("HIST:",history,C-visited)
+                    for key in C-visited:
+                        tmp_solution = None
+                        tmp_total = 0
+                        tmp_footfall = 0
+                        for solution_test in [{LK.f9100Count: 1, LK.f3100Count: 0}, {LK.f9100Count: 0, LK.f3100Count: 1}]:
+                            total, footfall = try_placing_refill(history, key, solution_test, total_score, mapEntity_subgraph, generalData, mapName)
+                            print(key, S.nodes[key][LK.locationType], total, footfall)
+                            if total > tmp_total:
+                                tmp_solution = solution_test
+                                tmp_total = total       
+                                tmp_footfall = footfall          
+                        if tmp_total > best_total:
+                            temp = copy.deepcopy(history)
+                            temp[LK.locations][key] = tmp_solution
+                            if len(bestk) < K:                            
+                                heapq.heappush(bestk, KeyDict((tmp_total,tmp_footfall),{
+                                    LK.locations: temp[LK.locations],
+                                    'terminated': False,
+                                }))
+                            else:
+                                heapq.heappushpop(bestk, KeyDict((tmp_total,tmp_footfall),{
+                                    LK.locations: temp[LK.locations],
+                                    'terminated': False,
+                                }))
+                            
+                            print("TEMP:",temp)
+                            print("BESTK",bestk)
+                for best_solution in bestk:
+                    if len(best_solution.dct[LK.locations]) < steps:
+                        best_solution.dct['terminated'] = True
+                if all([best_solution.dct['terminated'] for best_solution in bestk]):
+                    break
+            solution_subgraph = heapq.nlargest(1,bestk)[0].dct
+            print("subgraph",solution_subgraph[LK.locations], total_score)
+            if solution_subgraph[LK.locations]:
+                # Place refill station in subgraph in solution
+                solution[LK.locations].update(solution_subgraph[LK.locations])
+                scoredSolution = calculateScore(mapName, solution_subgraph, mapEntity_subgraph, generalData)
+                update_total_score(total_score,scoredSolution,generalData,add=1)
+            print("total_score",total_score)
+            # print("TOTAL",calculateScore(mapName, solution, mapEntity, generalData)[SK.gameScore])
+            print("------")
+                
+                
+            # print("total_score",cal_total_score(total_score,generalData), total_score)
+    # solution = fix_refill_placement(solution, mapEntity, generalData, mapName)
+    return solution
+
 
 
 def fix_refill_placement(solution, mapEntity, generalData, mapName):
