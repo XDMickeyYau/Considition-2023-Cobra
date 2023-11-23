@@ -1,5 +1,6 @@
 # Algorithm
 Our solution employ a mix of beam-search and brute force algorithm
+
     1. Create graph, initilize total solution, total score and best total score
     2. Loop maxL times: 
         1. get a list of disconnected subgraph
