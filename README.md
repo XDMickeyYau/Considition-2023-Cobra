@@ -1,8 +1,20 @@
 # Introduction
 
-This is a start kit for those that will participate in Considition 2023 using Python.
+This is the submitted code of team Cobra in Considition 2023 using Python.
 
-main.py contains an example of:
+algorithm.py contains the main code of refill station placement alogrithm.
+
+- graph_mixed_score(): Main function of our solution, a mix of beam-search and brute force algorithm
+- algo(): inteface for eval.py
+- create_graph(): Create networkx graph from mapEntity
+- get_mapEntity_subgraph(): Get a subset of mapEntity where all the locations are in subgraph C
+- get_solution_subgreaph(): Get a subset of solution where all the locations are in subgraph C
+- refine_footfall(): Fix rounding error in footfall using scoredSolution calculated from the scoring function
+- update_total_score(): Update the game score dictionary total_score using scoredSolution calculated from the scoring function
+- try_placing_refill(): Simulate the effect of placing a refill station in signle location in a subgraph
+- initize_solution_subgraph(): Reset solutions in a subgraph C
+
+eval.py is the main scipt for submission:
 
 - Fetching required data
 - Submitting a solution to Considition 2023
@@ -12,15 +24,20 @@ main.py contains an example of:
 
 visualization.ipynb is a notebook for visualizing games.
 
+exploration.ipynb is a notebook for exploratory data anlysis of map data.
+
+graph.ipynb is a notebook for exploratory data anlysis of graphs.
+
 scoring.py contains the logic for how we score a solution.
 
 api.py contains methods for using the Considition apis.
+
 
 # Getting Started
 
 We recommended using visual studio code (https://code.visualstudio.com/Download) with the "Jupyter" extension for running the note book in this repo.
 
-----Running main.py-----
+----Running eval.py-----
 
 1. Install python 3.11. https://www.python.org/downloads/
 2. Navigate to the root folder of the project and create a virtual environment with required dependencies:

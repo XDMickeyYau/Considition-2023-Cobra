@@ -171,9 +171,9 @@ def initize_solution_subgraph(C, solution, total_score, mapEntity, generalData, 
     return mapEntity_subgraph, solution_subgraph, total_score[SK.total]
 
 def graph_mixed_score(mapEntity, generalData, mapName, maxK=1, maxL=4, maxB=1, reverse_task=True):
-    """Main fucntion of our solution, a mix of beam-search and brute force algorithm
+    """Main function of our solution, a mix of beam-search and brute force algorithm
     1. Create graph, initilize total solution, total score and best total score
-    2. Loop maxL times:
+    2. Loop maxL times: 
         1. get a list of disconnected subgraph
         2. For each subgraph:
             1. Intitalize mapEntity, solution and total score in the subgraph
