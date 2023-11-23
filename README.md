@@ -40,7 +40,7 @@ We recommended using visual studio code (https://code.visualstudio.com/Download)
 4. Run the program with
 
 ```console
-   python .\main.py
+   python .\eval.py
 ```
 
 ----Running visualization.ipynb in vs code----
