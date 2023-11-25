@@ -1,24 +1,24 @@
 # Algorithm
-Our solution employ a mix of beam-search and brute force algorithm
+Our solution employs a mix of beam-search and brute force algorithm
 
-    1. Create graph, initilize total solution, total score and best total score
+    1. Create a graph, initialize total solution, total score and best total score
     2. Loop maxL times: 
-        1. get a list of disconnected subgraph
+        1. get a list of disconnected subgraphs
         2. For each subgraph:
-            1. Intitalize mapEntity, solution and total score in the subgraph
-            2. If subgraph size <= maxB, do brute force search for the best solution within the subgraph
-            3. Else, do beam search with width maxK for the best solution within the subgraph
+            1. Initialize mapEntity, solution and total score in the subgraph
+            2. If subgraph size <= maxB, do brute force searches for the best solution within the subgraph
+            3. Else, do beam searches with width maxK for the best solution within the subgraph
             4. add subgraph solution into total solution and update the total score 
 
-There are several design choice:
+We have also made several design choices:
 - To speed up the score calculation within a subgraph
-   - we run the scoring function (earning, footfall, co2 saving) within a subgraph, avoiding the need to scanning through the whole map
-   - we have a total_score dict to keep track of the score metrics earned in other subgraphs
-- We scan through the map for several times
-   - In the first loop, we have no information on the refill station placement no processed yet, thus effect of footfall and earning may not be accurate/underestimated. This affect the evaluation on the trade-off between footfall and earning
-   - In the subseqent loop, we already have the station placement in all other stations, allowing the algorithm to calcuate the score more accurately. this lead to better placement.
-- We deicde which algorithm to run depending on the subgraph size
-   - If the size is small, brute force would be used to get higher score while mainitaining a reasonable runtime
+   - we run the scoring function (earning, footfall, co2 saving) within a subgraph, avoiding the need to scan through the whole map
+   - we have a total_score dictionary to keep track of the score metrics earned in other subgraphs
+- We scan through the map multiple times
+   - In the first loop, we have no information on the refill station placement of the subgraphs that are not processed yet, thus the effect of footfall and earnings may not be accurate.
+   - In the subsequent loop, we already have the station placement in all other stations, allowing the algorithm to calculate the score more accurately.
+- We decide which algorithm to run depending on the subgraph size
+   - If the size is small, brute force would be used to get a higher score while maintaining a reasonable runtime
    - If the size is large, beam search would be used to speed up the processing time while getting a reasonably high score
 
 
@@ -27,31 +27,31 @@ There are several design choice:
 
 This is the submitted code of team Cobra in Considition 2023 using Python.
 
-algorithm.py contains the main code of refill station placement alogrithm.
+algorithm.py contains the main code of the refill station placement algorithm.
 
-- graph_mixed_score(): Main function of our solution, a mix of beam-search and brute force algorithm
+- graph_mixed_score(): The main function of our solution, a mix of beam-search and brute force algorithm
 - algo(): inteface for eval.py
 - create_graph(): Create networkx graph from mapEntity
 - get_mapEntity_subgraph(): Get a subset of mapEntity where all the locations are in subgraph C
-- get_solution_subgreaph(): Get a subset of solution where all the locations are in subgraph C
+- get_solution_subgreaph(): Get a subset of the solution where all the locations are in subgraph C
 - refine_footfall(): Fix rounding error in footfall using scoredSolution calculated from the scoring function
 - update_total_score(): Update the game score dictionary total_score using scoredSolution calculated from the scoring function
-- try_placing_refill(): Simulate the effect of placing a refill station in signle location in a subgraph
+- try_placing_refill(): Simulate the effect of placing a refill station in a single location in a subgraph
 - initize_solution_subgraph(): Reset solutions in a subgraph C
 
-eval.py is the main scipt for submission:
+eval.py is the main script for submission:
 
 - Fetching required data
 - Submitting a solution to Considition 2023
 - Scoring a solution locally and saving the "game"
-  - There will be a request limit for the Considition apis so if you wish to train a AI/ML or trying some brute force solution you'll have to use the scoring function that comes in this repo.
-  - Saved games can be visualized using the the notebook in this repo
+  - There will be a request limit for the Considition apis so if you wish to train an AI/ML or try some brute force solution you'll have to use the scoring function that comes in this repo.
+  - Saved games can be visualized using the notebook in this repo
 
 visualization.ipynb is a notebook for visualizing games.
 
-exploration.ipynb is a notebook for exploratory data anlysis of map data.
+exploration.ipynb is a notebook for exploratory data analysis of map data.
 
-graph.ipynb is a notebook for exploratory data anlysis of graphs.
+graph.ipynb is a notebook for exploratory data analysis of graphs.
 
 scoring.py contains the logic for how we score a solution.
 
